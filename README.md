@@ -69,7 +69,3 @@ Kontribusi dari siapa pun sangat diterima! Jika kamu ingin:
 * 📚 Meningkatkan dokumentasi
 
 Silakan fork repositori ini, buat branch fitur kamu, lalu kirimkan **Pull Request**!
-
-## 📜 Lisensi
-
-Lisensi belum ditentukan dalam repo saat ini. Tambahkan file `LICENSE` jika kamu ingin melisensikannya (misal MIT / Apache 2.0).
