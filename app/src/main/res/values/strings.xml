@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">My Student App</string>
+
+    <!-- Buttons -->
+    <string name="add_button">Tambah</string>
+    <string name="update_button">Update</string>
+    <string name="delete_button">Hapus</string>
+    <string name="sort_nim">Sort NIM</string>
+    <string name="sort_nama">Sort Nama</string>
+    <string name="sort_jurusan">Sort Jurusan</string>
+    <string name="save_button">Simpan</string>
+    <string name="load_button">Load</string>
+
+    <!-- Labels -->
+    <string name="label_nim">NIM</string>
+    <string name="label_nama">Nama</string>
+    <string name="label_jurusan">Jurusan</string>
+
+    <!-- Messages -->
+    <string name="error_empty_field">Semua field harus diisi!</string>
+</resources>
