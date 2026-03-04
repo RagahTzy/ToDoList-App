@@ -1,58 +1,53 @@
-📋 To‑Do List App
+# 📋 To‑Do List App
 
-To‑Do List App adalah aplikasi Android sederhana yang membantu pengguna menyimpan, menandai, dan menghapus tugas secara efisien. Aplikasi ini dibuat sebagai proyek awal untuk latihan pengembangan Android dengan Kotlin.
+**To‑Do List App** adalah aplikasi Android sederhana yang membantu pengguna menyimpan, menandai, dan menghapus tugas secara efisien. Aplikasi ini dibuat sebagai proyek awal untuk latihan pengembangan Android dengan **Kotlin**.
 
-✨ Kamu bisa melihat struktur kode di dalam folder app/ yang berisi modul Android lengkap.
+✨ Kamu bisa melihat struktur kode di dalam folder `app/` yang berisi modul Android lengkap.
 
-📌 Fitur Utama
+## 📌 Fitur Utama
 
-✅ Tambah tugas baru
+* ✅ Tambah tugas baru
+* 📌 Menandai tugas sebagai selesai
+* 🗑️ Hapus tugas yang sudah selesai
+* 📦 Penyimpanan sederhana (local)
+* 🧠 Tampilan cukup bersih dan mudah digunakan
 
-📌 Menandai tugas sebagai selesai
+> Aplikasi ini cocok untuk belajar dasar‑dasar Android dan Kotlin.
 
-🗑️ Hapus tugas yang sudah selesai
-
-📦 Penyimpanan sederhana (local)
-
-🧠 Tampilan cukup bersih dan mudah digunakan
-
-Aplikasi ini cocok untuk belajar dasar‑dasar Android dan Kotlin.
-
-💻 Teknologi & Tools
+## 💻 Teknologi & Tools
 
 Proyek ini dibangun menggunakan:
 
-🔹 Kotlin – Bahasa pemrograman utama
+* 🔹 **Kotlin** – Bahasa pemrograman utama
+* 📱 **Android Studio** – IDE pengembangan Android
+* 🛠️ **Gradle** – Sistem build
+* 📄 XML – Layout UI Android
 
-📱 Android Studio – IDE pengembangan Android
+> Struktur proyek mengikuti standar Android dengan folder `app/`, `gradle/`, dan konfigurasi build.
 
-🛠️ Gradle – Sistem build
+## 🚀 Cara Menjalankan Aplikasi
 
-📄 XML – Layout UI Android
+1. **Clone repo ini**
 
-Struktur proyek mengikuti standar Android dengan folder app/, gradle/, dan konfigurasi build.
+   ```bash
+   git clone https://github.com/RagahTzy/ToDoList-App.git
+   ```
 
-🚀 Cara Menjalankan Aplikasi
+2. **Buka proyek di Android Studio**
 
-Clone repo ini
+   * Pilih **Open an existing Android Studio project**
+   * Arahkan ke folder hasil clone
 
-git clone https://github.com/RagahTzy/ToDoList-App.git
+3. **Jalankan aplikasi**
 
-Buka proyek di Android Studio
+   * Tekan tombol ▶️ *Run* di Android Studio
+   * Pilih emulator atau perangkat fisik
 
-Pilih Open an existing Android Studio project
+💡 Pastikan kamu sudah menginstal **Android SDK** terbaru dan menjalankan emulator atau perangkat dengan API level yang sesuai.
 
-Arahkan ke folder hasil clone
+## 📁 Struktur Direktori
 
-Jalankan aplikasi
-
-Tekan tombol ▶️ Run di Android Studio
-
-Pilih emulator atau perangkat fisik
-
-💡 Pastikan kamu sudah menginstal Android SDK terbaru dan menjalankan emulator atau perangkat dengan API level yang sesuai.
-
-📁 Struktur Direktori
+```plain
 📦ToDoList-App
  ┣ 📂 app
  ┃ ┣ 📂 src
@@ -63,18 +58,18 @@ Pilih emulator atau perangkat fisik
  ┣ 📄 build.gradle.kts
  ┣ 📄 settings.gradle.kts
  ┗ 📄 gradlew / gradlew.bat
-🤝 Kontribusi
+```
+
+## 🤝 Kontribusi
 
 Kontribusi dari siapa pun sangat diterima! Jika kamu ingin:
 
-🐞 Memperbaiki bug
+* 🐞 Memperbaiki bug
+* ✨ Menambah fitur baru
+* 📚 Meningkatkan dokumentasi
 
-✨ Menambah fitur baru
+Silakan fork repositori ini, buat branch fitur kamu, lalu kirimkan **Pull Request**!
 
-📚 Meningkatkan dokumentasi
+## 📜 Lisensi
 
-Silakan fork repositori ini, buat branch fitur kamu, lalu kirimkan Pull Request!
-
-📜 Lisensi
-
-Lisensi belum ditentukan dalam repo saat ini. Tambahkan file LICENSE jika kamu ingin melisensikannya (misal MIT / Apache 2.0).
+Lisensi belum ditentukan dalam repo saat ini. Tambahkan file `LICENSE` jika kamu ingin melisensikannya (misal MIT / Apache 2.0).
