@@ -8,6 +8,6 @@ data class Tugas(
     val id: String = UUID.randomUUID().toString(),
     val namaMatkul: String,
     val deadline: String,
-    val kategoriTugas: String, // Kelompok / Individu
-    val kategoriMatkul: String  // Praktikum / Teori
+    val kategoriTugas: String,
+    val kategoriMatkul: String
 )

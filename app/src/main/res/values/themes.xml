@@ -1,12 +1,16 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <style name="Theme.ToDoList" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Main theme colors -->
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
+        <item name="android:windowBackground">@color/md_theme_background</item>
+        <item name="android:colorBackground">@color/md_theme_background</item>
 
-        <item name="colorSecondary">@color/md_theme_secondary</item>
-        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
+        <!-- Status Bar and Navigation Bar colors to match Cyberpunk theme -->
+        <item name="android:statusBarColor">@color/dark_background</item>
+        <item name="android:navigationBarColor">@color/dark_background</item>
 
-        <item name="android:statusBarColor">@color/md_theme_primary</item>
-        <item name="android:navigationBarColor">@color/md_theme_primary</item>
+        <!-- API 23+ (MinSdk 24 is safe) -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
