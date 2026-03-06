@@ -3,19 +3,19 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
+    alias(libs.plugins.kotlin.serialization)
 }
 
-android {
+configure<com.android.build.api.dsl.ApplicationExtension> {
     namespace = "com.example.todolist"
-    compileSdk = 35
+    // Diperbarui ke 36 sesuai rekomendasi error metadata AAR
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.todolist"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -24,7 +24,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -49,6 +49,7 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 }
 
 dependencies {
+    // Gunakan titik (.) untuk memanggil library dari catalog
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -57,8 +58,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.material)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    implementation(libs.kotlinx.serialization.json)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

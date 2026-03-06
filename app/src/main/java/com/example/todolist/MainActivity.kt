@@ -23,7 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -111,15 +110,18 @@ fun TugasApp(viewModel: TugasViewModel) {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "HOMEWORK LIST",
+                        "To Do List",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 4.sp,
                         color = NeonCyan
                     )
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = DarkBackground.copy(alpha = 0.8f)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkBackground.copy(alpha = 0.8f),
+                    titleContentColor = NeonCyan,
+                    navigationIconContentColor = NeonCyan,
+                    actionIconContentColor = NeonCyan
                 ),
                 actions = {
                     Box {
@@ -161,7 +163,7 @@ fun TugasApp(viewModel: TugasViewModel) {
             val isPressed by interactionSource.collectIsPressedAsState()
             
             val scale by animateFloatAsState(
-                targetValue = if (isPressed) 0.9f else 1f,
+                targetValue = if (isPressed) 0.85f else 1f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
                 label = "fabScale"
             )
@@ -210,11 +212,14 @@ fun TugasApp(viewModel: TugasViewModel) {
                         }
                     },
                     shape = RoundedCornerShape(24.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonCyan,
                         unfocusedBorderColor = NeonCyan.copy(alpha = 0.3f),
                         cursorColor = NeonCyan,
-                        containerColor = SurfaceDark.copy(alpha = 0.5f)
+                        focusedContainerColor = SurfaceDark.copy(alpha = 0.5f),
+                        unfocusedContainerColor = SurfaceDark.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     ),
                     singleLine = true
                 )
@@ -261,7 +266,7 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
     val isKelompok = tugas.kategoriTugas.contains("Kelompok", ignoreCase = true)
     val baseColor = if (isKelompok) NeonMagenta else NeonCyan
     
-    val infiniteTransition = rememberInfiniteTransition(label = "")
+    val infiniteTransition = rememberInfiniteTransition(label = "borderTransition")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.4f,
         targetValue = 1f,
@@ -296,6 +301,7 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
                     letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                // Deadline text in White
                 Text(
                     text = "DEADLINE: ${tugas.deadline}",
                     style = MaterialTheme.typography.labelMedium,
@@ -306,6 +312,7 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
+                    // Badge text in White if "Kelompok"
                     val badgeColor = if (isKelompok) Color.White else NeonMagenta
                     NeonBadge(text = tugas.kategoriTugas, color = badgeColor)
                     NeonBadge(text = tugas.kategoriMatkul, color = NeonCyan)
@@ -359,40 +366,50 @@ fun TugasDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier
-            .padding(16.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .border(BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)), RoundedCornerShape(28.dp))
-            .background(SurfaceDark),
-        content = {
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(namaMatkul, "$selectedDay-$selectedMonth-$selectedYear", kategoriTugas, kategoriMatkul) },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.neonGlow(NeonCyan, borderRadius = 12.dp, glowRadius = 6.dp)
+            ) {
+                Text("SAVE TASK", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.Gray) }
+        },
+        title = {
+            Text(
+                text = if (tugas == null) "ADD TASK" else "EDIT TASK",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = NeonCyan,
+                letterSpacing = 2.sp
+            )
+        },
+        text = {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text(
-                    text = if (tugas == null) "ADD TASK" else "EDIT TASK",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = NeonCyan,
-                    letterSpacing = 2.sp
-                )
-
                 OutlinedTextField(
                     value = namaMatkul,
                     onValueChange = { namaMatkul = it },
                     label = { Text("Subject Name", color = NeonCyan.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonCyan,
                         unfocusedBorderColor = Color.Gray,
-                        cursorColor = NeonCyan
+                        cursorColor = NeonCyan,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("DEADLINE", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("DEADLINE (Day/Month/Year)", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SimpleDropdown(options = viewModel.days, selected = selectedDay, onSelected = { selectedDay = it }, modifier = Modifier.weight(1f))
                         SimpleDropdown(options = viewModel.months, selected = selectedMonth, onSelected = { selectedMonth = it }, modifier = Modifier.weight(1f))
@@ -447,25 +464,13 @@ fun TugasDialog(
                         }
                     }
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.Gray) }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { onConfirm(namaMatkul, "$selectedDay-$selectedMonth-$selectedYear", kategoriTugas, kategoriMatkul) },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.neonGlow(NeonCyan, borderRadius = 12.dp, glowRadius = 6.dp)
-                    ) {
-                        Text("SAVE TASK", fontWeight = FontWeight.Bold)
-                    }
-                }
             }
-        }
+        },
+        containerColor = SurfaceDark,
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier
+            .padding(16.dp)
+            .border(BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)), RoundedCornerShape(28.dp))
     )
 }
 
