@@ -9,5 +9,6 @@ data class Tugas(
     val namaMatkul: String,
     val deadline: String,
     val kategoriTugas: String,
-    val kategoriMatkul: String
+    val kategoriMatkul: String,
+    val deskripsi: String = ""
 )
