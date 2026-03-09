@@ -14,7 +14,7 @@ configure<com.android.build.api.dsl.ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.todolist"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -62,6 +62,9 @@ dependencies {
     implementation(libs.material)
 
     implementation(libs.kotlinx.serialization.json)
+    
+    // WorkManager for background notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

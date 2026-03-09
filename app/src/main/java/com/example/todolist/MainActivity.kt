@@ -1,25 +1,29 @@
 package com.example.todolist
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
@@ -37,19 +41,18 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.todolist.ui.theme.ToDoListTheme
 import kotlinx.coroutines.launch
-
-// Neon Cyberpunk Palette
-val NeonCyan = Color(0xFF00F2FF)
-val NeonMagenta = Color(0xFFFF00D4)
-val NeonPurple = Color(0xFF9D00FF)
-val DarkBackground = Color(0xFF05050A)
-val SurfaceDark = Color(0xFF121224)
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 // Efek Neon Glow Custom
 fun Modifier.neonGlow(
@@ -71,6 +74,71 @@ fun Modifier.neonGlow(
     }
 }
 
+@Composable
+fun ScrollArrowsOverlay(
+    canScrollBackward: Boolean,
+    canScrollForward: Boolean,
+    color: Color = NeonCyan
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "arrowAnim")
+    val arrowOffset by infiniteTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "arrowOffset"
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = canScrollBackward,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .offset(y = arrowOffset.dp)
+                    .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f),
+                shape = CircleShape,
+                color = color,
+                contentColor = Color.Black
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Scroll Up",
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = canScrollForward,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .offset(y = arrowOffset.dp)
+                    .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f),
+                shape = CircleShape,
+                color = color,
+                contentColor = Color.Black
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Scroll Down",
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+        }
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +147,35 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ToDoListTheme(darkTheme = true) {
+                val context = LocalContext.current
+                var hasNotificationPermission by remember {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        mutableStateOf(
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                        )
+                    } else {
+                        mutableStateOf(true)
+                    }
+                }
+
+                val launcher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                    onResult = { isGranted ->
+                        hasNotificationPermission = isGranted
+                    }
+                )
+
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (!hasNotificationPermission) {
+                            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = DarkBackground
@@ -95,13 +192,15 @@ class MainActivity : ComponentActivity() {
 fun TugasApp(viewModel: TugasViewModel) {
     val daftarTugas by viewModel.daftarTugas.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
+    val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
     var showManageCategories by remember { mutableStateOf(false) }
+    var showNotificationSettings by remember { mutableStateOf(false) }
     var selectedTugas by remember { mutableStateOf<Tugas?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
     
-    // State konfirmasi hapus
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var tugasToDelete by remember { mutableStateOf<Tugas?>(null) }
 
@@ -140,10 +239,26 @@ fun TugasApp(viewModel: TugasViewModel) {
                 )
                 HorizontalDivider(color = NeonCyan.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                 NavigationDrawerItem(
+                    label = { Text("NOTIF SETTINGS", fontWeight = FontWeight.Bold) },
+                    selected = false,
+                    onClick = {
+                        showNotificationSettings = true
+                        scope.launch { drawerState.close() }
+                    },
+                    icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = NeonCyan,
+                        unselectedTextColor = Color.White
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                NavigationDrawerItem(
                     label = { Text("MANAGE CATEGORIES", fontWeight = FontWeight.Bold) },
                     selected = false,
                     onClick = {
                         showManageCategories = true
+                        scope.launch { drawerState.close() }
                     },
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     colors = NavigationDrawerItemDefaults.colors(
@@ -281,24 +396,40 @@ fun TugasApp(viewModel: TugasViewModel) {
                         singleLine = true
                     )
 
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        items(filteredTugas, key = { it.id }) { tugas ->
-                            TugasCardNeon(
-                                tugas = tugas,
-                                onDelete = { 
-                                    tugasToDelete = tugas
-                                    showDeleteConfirm = true
-                                },
-                                onEdit = {
-                                    selectedTugas = tugas
-                                    showDialog = true
-                                }
-                            )
+                    val listState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            items(filteredTugas, key = { it.id }) { tugas ->
+                                val typeColor = Color(kategoriTugasList.find { it.nama == tugas.kategoriTugas }?.warna ?: NeonCyan.toArgb())
+                                val catColor = Color(kategoriMatkulList.find { it.nama == tugas.kategoriMatkul }?.warna ?: NeonCyan.toArgb())
+
+                                TugasCardNeon(
+                                    tugas = tugas,
+                                    baseColor = typeColor,
+                                    catColor = catColor,
+                                    onDelete = { 
+                                        tugasToDelete = tugas
+                                        showDeleteConfirm = true
+                                    },
+                                    onEdit = {
+                                        selectedTugas = tugas
+                                        showDialog = true
+                                    },
+                                    onToggleMute = {
+                                        viewModel.toggleReminderMute(tugas.id)
+                                    }
+                                )
+                            }
                         }
+                        ScrollArrowsOverlay(
+                            canScrollBackward = listState.canScrollBackward,
+                            canScrollForward = listState.canScrollForward
+                        )
                     }
                 }
             }
@@ -343,14 +474,25 @@ fun TugasApp(viewModel: TugasViewModel) {
             onDismiss = { showManageCategories = false }
         )
     }
+
+    if (showNotificationSettings) {
+        NotificationSettingsDialog(
+            viewModel = viewModel,
+            onDismiss = { showNotificationSettings = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
-    val isKelompok = tugas.kategoriTugas.contains("Group", ignoreCase = true)
-    val baseColor = if (isKelompok) NeonMagenta else NeonCyan
-    
+fun TugasCardNeon(
+    tugas: Tugas, 
+    baseColor: Color, 
+    catColor: Color,
+    onDelete: () -> Unit, 
+    onEdit: () -> Unit,
+    onToggleMute: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val rotationState by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f, label = "rotation"
@@ -366,6 +508,19 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
         ), label = "borderAlpha"
     )
 
+    val isNearDeadline = remember(tugas.deadline) {
+        try {
+            val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+            val deadlineDate = LocalDate.parse(tugas.deadline, formatter)
+            val today = LocalDate.now()
+            val daysUntil = ChronoUnit.DAYS.between(today, deadlineDate)
+            daysUntil <= 1L
+        } catch (e: Exception) {
+            false
+        }
+    }
+    val deadlineTextColor = if (isNearDeadline) NeonRed else Color.White
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -375,9 +530,9 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
                     stiffness = Spring.StiffnessLow
                 )
             )
-            .neonGlow(baseColor, alpha = 0.2f * alpha)
+            .neonGlow(if (isNearDeadline) NeonRed else baseColor, alpha = 0.2f * alpha)
             .border(
-                BorderStroke(1.dp, Brush.linearGradient(listOf(baseColor.copy(alpha = alpha), Color.Transparent))),
+                BorderStroke(1.dp, Brush.linearGradient(listOf((if (isNearDeadline) NeonRed else baseColor).copy(alpha = alpha), Color.Transparent))),
                 shape = RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark.copy(alpha = 0.7f)),
@@ -401,7 +556,7 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
                     Text(
                         text = "DEADLINE: ${tugas.deadline}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
+                        color = deadlineTextColor,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -425,9 +580,36 @@ fun TugasCardNeon(tugas: Tugas, onDelete: () -> Unit, onEdit: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val badgeColor = if (isKelompok) Color.White else NeonMagenta
-                    NeonBadge(text = tugas.kategoriTugas, color = badgeColor)
-                    NeonBadge(text = tugas.kategoriMatkul, color = NeonCyan)
+                    NeonBadge(text = tugas.kategoriTugas, color = baseColor)
+                    NeonBadge(text = tugas.kategoriMatkul, color = catColor)
+                    if (isNearDeadline) {
+                        Surface(
+                            modifier = Modifier.clickable { onToggleMute() },
+                            color = if (tugas.reminderMuted) Color.Gray.copy(alpha = 0.2f) else NeonRed.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(4.dp),
+                            border = BorderStroke(1.dp, if (tugas.reminderMuted) Color.Gray else NeonRed)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    if (tugas.reminderMuted) Icons.Default.NotificationsOff else Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = if (tugas.reminderMuted) Color.Gray else NeonRed
+                                )
+                                Text(
+                                    text = if (tugas.reminderMuted) "NOTIF OFF" else "BERHENTI NOTIF",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (tugas.reminderMuted) Color.Gray else NeonRed,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
                 }
 
                 IconButton(
@@ -501,11 +683,14 @@ fun TugasDialog(
     val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
     val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
 
-    var kategoriTugas by remember { mutableStateOf(tugas?.kategoriTugas ?: if (kategoriTugasList.isNotEmpty()) kategoriTugasList[0] else "") }
-    var kategoriMatkul by remember { mutableStateOf(tugas?.kategoriMatkul ?: if (kategoriMatkulList.isNotEmpty()) kategoriMatkulList[0] else "") }
+    var kategoriTugas by remember { mutableStateOf(tugas?.kategoriTugas ?: if (kategoriTugasList.isNotEmpty()) kategoriTugasList[0].nama else "") }
+    var kategoriMatkul by remember { mutableStateOf(tugas?.kategoriMatkul ?: if (kategoriMatkulList.isNotEmpty()) kategoriMatkulList[0].nama else "") }
 
     var showKategoriTugasSelector by remember { mutableStateOf(false) }
     var showKategoriMatkulSelector by remember { mutableStateOf(false) }
+
+    val currentTypeColor = Color(kategoriTugasList.find { it.nama == kategoriTugas }?.warna ?: NeonCyan.toArgb())
+    val currentCatColor = Color(kategoriMatkulList.find { it.nama == kategoriMatkul }?.warna ?: NeonCyan.toArgb())
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -532,69 +717,74 @@ fun TugasDialog(
             )
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                OutlinedTextField(
-                    value = namaMatkul,
-                    onValueChange = { namaMatkul = it },
-                    label = { Text("Subject Name", color = NeonCyan.copy(alpha = 0.6f)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NeonCyan,
-                        unfocusedBorderColor = Color.Gray,
-                        cursorColor = NeonCyan,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    OutlinedTextField(
+                        value = namaMatkul,
+                        onValueChange = { namaMatkul = it },
+                        label = { Text("Subject Name", color = NeonCyan.copy(alpha = 0.6f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NeonCyan,
+                            unfocusedBorderColor = Color.Gray,
+                            cursorColor = NeonCyan,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
 
-                OutlinedTextField(
-                    value = deskripsi,
-                    onValueChange = { deskripsi = it },
-                    label = { Text("Description", color = NeonCyan.copy(alpha = 0.6f)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NeonCyan,
-                        unfocusedBorderColor = Color.Gray,
-                        cursorColor = NeonCyan,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    minLines = 3
-                )
+                    OutlinedTextField(
+                        value = deskripsi,
+                        onValueChange = { deskripsi = it },
+                        label = { Text("Description", color = NeonCyan.copy(alpha = 0.6f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NeonCyan,
+                            unfocusedBorderColor = Color.Gray,
+                            cursorColor = NeonCyan,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        minLines = 3
+                    )
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("DEADLINE (Day/Month/Year)", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SimpleDropdown(options = viewModel.days, selected = selectedDay, onSelected = { selectedDay = it }, modifier = Modifier.weight(1f))
-                        SimpleDropdown(options = viewModel.months, selected = selectedMonth, onSelected = { selectedMonth = it }, modifier = Modifier.weight(1f))
-                        SimpleDropdown(options = viewModel.years, selected = selectedYear, onSelected = { selectedYear = it }, modifier = Modifier.weight(1.2f))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("DEADLINE (Day/Month/Year)", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SimpleDropdown(options = viewModel.days, selected = selectedDay, onSelected = { selectedDay = it }, modifier = Modifier.weight(1f))
+                            SimpleDropdown(options = viewModel.months, selected = selectedMonth, onSelected = { selectedMonth = it }, modifier = Modifier.weight(1f))
+                            SimpleDropdown(options = viewModel.years, selected = selectedYear, onSelected = { selectedYear = it }, modifier = Modifier.weight(1.2f))
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("CATEGORIES", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                        
+                        CategoryButton(
+                            label = "Type: $kategoriTugas",
+                            color = currentTypeColor,
+                            onClick = { showKategoriTugasSelector = true }
+                        )
+
+                        CategoryButton(
+                            label = "Category: $kategoriMatkul",
+                            color = currentCatColor,
+                            onClick = { showKategoriMatkulSelector = true }
+                        )
                     }
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("CATEGORIES", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
-                    
-                    // Button to select Kategori Tugas
-                    CategoryButton(
-                        label = "Type: $kategoriTugas",
-                        color = NeonMagenta,
-                        onClick = { showKategoriTugasSelector = true }
-                    )
-
-                    // Button to select Kategori Matkul
-                    CategoryButton(
-                        label = "Category: $kategoriMatkul",
-                        color = NeonCyan,
-                        onClick = { showKategoriMatkulSelector = true }
-                    )
-                }
+                ScrollArrowsOverlay(
+                    canScrollBackward = scrollState.canScrollBackward,
+                    canScrollForward = scrollState.canScrollForward
+                )
             }
         },
         containerColor = SurfaceDark,
@@ -608,7 +798,7 @@ fun TugasDialog(
         CategorySelectionDialog(
             title = "SELECT TYPE",
             options = kategoriTugasList,
-            onSelected = { kategoriTugas = it; showKategoriTugasSelector = false },
+            onSelected = { kategoriTugas = it.nama; showKategoriTugasSelector = false },
             onDismiss = { showKategoriTugasSelector = false }
         )
     }
@@ -617,7 +807,7 @@ fun TugasDialog(
         CategorySelectionDialog(
             title = "SELECT CATEGORY",
             options = kategoriMatkulList,
-            onSelected = { kategoriMatkul = it; showKategoriMatkulSelector = false },
+            onSelected = { kategoriMatkul = it.nama; showKategoriMatkulSelector = false },
             onDismiss = { showKategoriMatkulSelector = false }
         )
     }
@@ -647,8 +837,8 @@ fun CategoryButton(label: String, color: Color, onClick: () -> Unit) {
 @Composable
 fun CategorySelectionDialog(
     title: String,
-    options: List<String>,
-    onSelected: (String) -> Unit,
+    options: List<Kategori>,
+    onSelected: (Kategori) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -656,31 +846,182 @@ fun CategorySelectionDialog(
         confirmButton = {},
         title = { Text(title, color = NeonCyan, fontWeight = FontWeight.Black) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                options.forEach { option ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelected(option) },
-                        color = SurfaceDark.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
-                    ) {
-                        Text(
-                            text = option,
-                            modifier = Modifier.padding(16.dp),
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium
-                        )
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    options.forEach { option ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelected(option) },
+                            color = SurfaceDark.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(option.warna).copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(modifier = Modifier.size(12.dp).background(Color(option.warna), CircleShape))
+                                Text(
+                                    text = option.nama,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
                 }
+                ScrollArrowsOverlay(
+                    canScrollBackward = scrollState.canScrollBackward,
+                    canScrollForward = scrollState.canScrollForward
+                )
             }
         },
         containerColor = SurfaceDark,
         shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun NotificationSettingsDialog(
+    viewModel: TugasViewModel,
+    onDismiss: () -> Unit
+) {
+    val settings by viewModel.notificationSettings.collectAsState()
+    var mode by remember { mutableStateOf(settings.mode) }
+    var intervalHours by remember { mutableStateOf(settings.intervalHours.toString()) }
+    var intervalMinutes by remember { mutableStateOf(settings.intervalMinutes.toString()) }
+    var hour by remember { mutableStateOf(settings.specificHour) }
+    var minute by remember { mutableStateOf(settings.specificMinute) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = {
+                    viewModel.updateNotificationSettings(
+                        NotificationSettings(
+                            mode = mode,
+                            intervalHours = intervalHours.toIntOrNull() ?: 1,
+                            intervalMinutes = intervalMinutes.toIntOrNull() ?: 0,
+                            specificHour = hour,
+                            specificMinute = minute
+                        )
+                    )
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black)
+            ) {
+                Text("SAVE SETTINGS", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.Gray) }
+        },
+        title = { Text("NOTIF SETTINGS", color = NeonCyan, fontWeight = FontWeight.Black) },
+        text = {
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Mode", color = Color.White, fontWeight = FontWeight.Bold)
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { mode = NotificationMode.INTERVAL },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = mode == NotificationMode.INTERVAL,
+                            onClick = { mode = NotificationMode.INTERVAL },
+                            colors = RadioButtonDefaults.colors(selectedColor = NeonCyan)
+                        )
+                        Text("Interval Mode", color = Color.White)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { mode = NotificationMode.SPECIFIC_TIME },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = mode == NotificationMode.SPECIFIC_TIME,
+                            onClick = { mode = NotificationMode.SPECIFIC_TIME },
+                            colors = RadioButtonDefaults.colors(selectedColor = NeonCyan)
+                        )
+                        Text("Specific Time Mode", color = Color.White)
+                    }
+
+                    if (mode == NotificationMode.INTERVAL) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = intervalHours,
+                                onValueChange = { if (it.all { char -> char.isDigit() }) intervalHours = it },
+                                label = { Text("Hours", color = NeonCyan.copy(alpha = 0.6f)) },
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = NeonCyan
+                                )
+                            )
+                            OutlinedTextField(
+                                value = intervalMinutes,
+                                onValueChange = { if (it.all { char -> char.isDigit() }) intervalMinutes = it },
+                                label = { Text("Minutes", color = NeonCyan.copy(alpha = 0.6f)) },
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = NeonCyan
+                                )
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Time:", color = Color.White)
+                            SimpleDropdown(
+                                options = (0..23).map { it.toString().padStart(2, '0') },
+                                selected = hour.toString().padStart(2, '0'),
+                                onSelected = { hour = it.toInt() },
+                                modifier = Modifier.width(70.dp)
+                            )
+                            Text(":", color = Color.White)
+                            SimpleDropdown(
+                                options = (0..59).map { it.toString().padStart(2, '0') },
+                                selected = minute.toString().padStart(2, '0'),
+                                onSelected = { minute = it.toInt() },
+                                modifier = Modifier.width(70.dp)
+                            )
+                        }
+                    }
+                }
+                ScrollArrowsOverlay(
+                    canScrollBackward = scrollState.canScrollBackward,
+                    canScrollForward = scrollState.canScrollForward
+                )
+            }
+        },
+        containerColor = SurfaceDark,
+        shape = RoundedCornerShape(24.dp)
     )
 }
 
@@ -694,11 +1035,12 @@ fun ManageCategoriesDialog(
     
     var newKategoriTugas by remember { mutableStateOf("") }
     var newKategoriMatkul by remember { mutableStateOf("") }
+    var selectedColorTugas by remember { mutableStateOf(NeonCyan) }
+    var selectedColorMatkul by remember { mutableStateOf(NeonCyan) }
 
-    // Konfirmasi Hapus Kategori
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<String?>(null) }
-    var deleteType by remember { mutableStateOf("") } // "Tugas" atau "Matkul"
+    var deleteType by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -707,51 +1049,67 @@ fun ManageCategoriesDialog(
         },
         title = { Text("MANAGE CATEGORIES", color = NeonCyan, fontWeight = FontWeight.Black) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                // Section Kategori Tugas
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("TASK TYPES (Individu/Kelompok)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = newKategoriTugas,
-                            onValueChange = { newKategoriTugas = it },
-                            placeholder = { Text("New Type", fontSize = 12.sp) },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
-                        )
-                        IconButton(
-                            onClick = { viewModel.tambahKategoriTugas(newKategoriTugas); newKategoriTugas = "" },
-                            modifier = Modifier.background(NeonMagenta, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("TASK TYPES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        
+                        ColorSelector(selectedColor = selectedColorTugas, onColorSelected = { selectedColorTugas = it })
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = newKategoriTugas,
+                                onValueChange = { newKategoriTugas = it },
+                                placeholder = { Text("New Type", fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                            )
+                            IconButton(
+                                onClick = { 
+                                    if(newKategoriTugas.isNotBlank()) {
+                                        viewModel.tambahKategoriTugas(Kategori(newKategoriTugas, selectedColorTugas.toArgb()))
+                                        newKategoriTugas = "" 
+                                    }
+                                },
+                                modifier = Modifier.background(selectedColorTugas, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
+                            }
                         }
-                    }
-                    kategoriTugasList.forEach { kat ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(kat, color = Color.White.copy(alpha = 0.8f))
-                            IconButton(onClick = { 
-                                categoryToDelete = kat
-                                deleteType = "Task"
-                                showDeleteConfirm = true
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        kategoriTugasList.forEach { kat ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Box(modifier = Modifier.size(10.dp).background(Color(kat.warna), CircleShape))
+                                    Text(kat.nama, color = Color.White.copy(alpha = 0.8f))
+                                }
+                                IconButton(onClick = { 
+                                    categoryToDelete = kat.nama
+                                    deleteType = "Task"
+                                    showDeleteConfirm = true
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
                     }
-                }
 
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
+                    HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
 
-                // Section Kategori Matkul
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("TASK CATEGORIES (Theory/Practicum)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("TASK CATEGORIES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        
+                        ColorSelector(selectedColor = selectedColorMatkul, onColorSelected = { selectedColorMatkul = it })
+
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = newKategoriMatkul,
@@ -761,8 +1119,13 @@ fun ManageCategoriesDialog(
                             colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                         )
                         IconButton(
-                            onClick = { viewModel.tambahKategoriMatkul(newKategoriMatkul); newKategoriMatkul = "" },
-                            modifier = Modifier.background(NeonCyan, CircleShape)
+                            onClick = { 
+                                if(newKategoriMatkul.isNotBlank()) {
+                                    viewModel.tambahKategoriMatkul(Kategori(newKategoriMatkul, selectedColorMatkul.toArgb()))
+                                    newKategoriMatkul = "" 
+                                }
+                            },
+                            modifier = Modifier.background(selectedColorMatkul, CircleShape)
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
                         }
@@ -773,9 +1136,12 @@ fun ManageCategoriesDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(kat, color = Color.White.copy(alpha = 0.8f))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(modifier = Modifier.size(10.dp).background(Color(kat.warna), CircleShape))
+                                Text(kat.nama, color = Color.White.copy(alpha = 0.8f))
+                            }
                             IconButton(onClick = { 
-                                categoryToDelete = kat
+                                categoryToDelete = kat.nama
                                 deleteType = "Category"
                                 showDeleteConfirm = true
                             }) {
@@ -785,36 +1151,63 @@ fun ManageCategoriesDialog(
                     }
                 }
             }
-        },
-        containerColor = SurfaceDark,
-        shape = RoundedCornerShape(24.dp)
-    )
-
-    if (showDeleteConfirm && categoryToDelete != null) {
-        val dialogTitle = if (deleteType == "Task") "DELETE TASK TYPE" else "DELETE TASK CATEGORY"
-        val dialogMessage = if (deleteType == "Task") {
-            "Are you sure you want to delete the '$categoryToDelete' task type? This action cannot be undone."
-        } else {
-            "Are you sure you want to delete the '$categoryToDelete' category? This action cannot be undone."
+            ScrollArrowsOverlay(
+                canScrollBackward = scrollState.canScrollBackward,
+                canScrollForward = scrollState.canScrollForward
+            )
         }
+    },
+    containerColor = SurfaceDark,
+    shape = RoundedCornerShape(24.dp)
+)
 
-        DeleteConfirmationDialog(
-            onDismiss = {
-                showDeleteConfirm = false
-                categoryToDelete = null
-            },
-            onConfirm = {
-                if (deleteType == "Task") {
-                    viewModel.hapusKategoriTugas(categoryToDelete!!)
-                } else {
-                    viewModel.hapusKategoriMatkul(categoryToDelete!!)
-                }
-                showDeleteConfirm = false
-                categoryToDelete = null
-            },
-            title = dialogTitle,
-            message = dialogMessage
-        )
+if (showDeleteConfirm && categoryToDelete != null) {
+    val dialogTitle = if (deleteType == "Task") "DELETE TASK TYPE" else "DELETE TASK CATEGORY"
+    val dialogMessage = if (deleteType == "Task") {
+        "Are you sure you want to delete the '$categoryToDelete' task type? This action cannot be undone."
+    } else {
+        "Are you sure you want to delete the '$categoryToDelete' category? This action cannot be undone."
+    }
+
+    DeleteConfirmationDialog(
+        onDismiss = {
+            showDeleteConfirm = false
+            categoryToDelete = null
+        },
+        onConfirm = {
+            if (deleteType == "Task") {
+                viewModel.hapusKategoriTugas(categoryToDelete!!)
+            } else {
+                viewModel.hapusKategoriMatkul(categoryToDelete!!)
+            }
+            showDeleteConfirm = false
+            categoryToDelete = null
+        },
+        title = dialogTitle,
+        message = dialogMessage
+    )
+}
+}
+
+@Composable
+fun ColorSelector(selectedColor: Color, onColorSelected: (Color) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        NeonColors.forEach { color ->
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(color, CircleShape)
+                    .border(
+                        width = if (selectedColor == color) 2.dp else 0.dp,
+                        color = Color.White,
+                        shape = CircleShape
+                    )
+                    .clickable { onColorSelected(color) }
+            )
+        }
     }
 }
 

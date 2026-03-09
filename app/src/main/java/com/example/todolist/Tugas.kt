@@ -10,5 +10,6 @@ data class Tugas(
     val deadline: String,
     val kategoriTugas: String,
     val kategoriMatkul: String,
-    val deskripsi: String = ""
+    val deskripsi: String = "",
+    val reminderMuted: Boolean = false
 )
