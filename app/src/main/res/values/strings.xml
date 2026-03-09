@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">To Do List App</string>
+    <string name="app_name">Taskora</string>
 
     <!-- Messages -->
     <string name="error_empty_field">Semua field harus diisi!</string>
