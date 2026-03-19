@@ -101,6 +101,8 @@ class TugasViewModel(context: Context) : ViewModel() {
     fun hapusTugas(id: String) { _daftarTugas.value = _daftarTugas.value.filter { it.id != id }; saveData() }
     fun updateTugas(tugas: Tugas) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == tugas.id) tugas else it }; saveData() }
     fun toggleReminderMute(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(reminderMuted = !it.reminderMuted) else it }; saveData() }
+    fun completeTugas(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = true) else it }; saveData() }
+    fun restoreTugas(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = false) else it }; saveData() }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
     private fun updateKategori(flow: MutableStateFlow<List<Kategori>>, kategori: Kategori) {

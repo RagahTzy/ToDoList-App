@@ -1,6 +1,5 @@
 package com.example.todolist
 
-import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -19,87 +18,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 
-fun Modifier.neonGlow(
-    color: Color,
-    borderRadius: Dp = 16.dp,
-    glowRadius: Dp = 8.dp,
-    alpha: Float = 0.5f
-) = drawBehind {
-    val paint = Paint().asFrameworkPaint().apply {
-        this.color = color.copy(alpha = alpha).toArgb()
-        setShadowLayer(glowRadius.toPx(), 0f, 0f, color.toArgb())
-    }
-    drawIntoCanvas {
-        it.nativeCanvas.drawRoundRect(
-            0f, 0f, size.width, size.height,
-            borderRadius.toPx(), borderRadius.toPx(),
-            paint
-        )
-    }
-}
-
-fun hideSystemBars(window: Window) {
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    val controller = WindowCompat.getInsetsController(window, window.decorView)
-    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-    controller.hide(WindowInsetsCompat.Type.systemBars())
-}
-
-@Composable
-fun HideSystemBarsInDialog() {
-    val view = LocalView.current
-    DisposableEffect(view) {
-        val parent = view.parent
-        if (parent is DialogWindowProvider) {
-            val window = parent.window
-            window.setFlags(
-                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            )
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    )
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-        }
-        onDispose {}
-    }
-}
 
 @Composable
 fun ImmersiveDialog(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismissRequest,
-        properties = androidx.compose.ui.window.DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        HideSystemBarsInDialog()
         content()
     }
 }
@@ -125,7 +55,6 @@ private fun BoxScope.ScrollArrowButton(
             modifier = Modifier
                 .size(40.dp)
                 .offset(y = offset.dp)
-                .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -253,8 +182,7 @@ fun DeleteConfirmationDialog(
                 Button(
                     onClick = onConfirm,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3366), contentColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.neonGlow(Color(0xFFFF3366), borderRadius = 12.dp, glowRadius = 6.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("DELETE", fontWeight = FontWeight.Bold)
                 }

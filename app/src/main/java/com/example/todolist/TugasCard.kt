@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,29 +66,24 @@ fun TugasCardNeon(
     catColor: Color,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    onToggleMute: () -> Unit
+    onToggleMute: () -> Unit,
+    onComplete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
-    val alpha by rememberInfiniteTransition(label = "borderTransition").animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse),
-        label = "borderAlpha"
-    )
-
     val isNearDeadline = remember(tugas.deadline) { isDeadlineNear(tugas.deadline) }
     val accentColor = if (isNearDeadline) NeonRed else baseColor
 
     Card(
+        onClick = { expanded = !expanded },
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
-            .neonGlow(accentColor, alpha = 0.2f * alpha)
             .border(
-                BorderStroke(1.dp, Brush.linearGradient(listOf(accentColor.copy(alpha = alpha), Color.Transparent))),
+                BorderStroke(2.dp, accentColor.copy(alpha = 0.6f)),
                 shape = RoundedCornerShape(16.dp)
             ),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark.copy(alpha = 0.7f)),
+        colors = CardDefaults.cardColors(containerColor = baseColor.copy(alpha = 0.1f)),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
@@ -115,6 +109,9 @@ fun TugasCardNeon(
                     )
                 }
                 Row {
+                    IconButton(onClick = onComplete) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = "Complete", tint = NeonGreen)
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White.copy(alpha = 0.6f))
                     }
