@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -18,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 class TugasViewModel(context: Context) : ViewModel() {
     private val _daftarTugas = MutableStateFlow<List<Tugas>>(emptyList())
-    val daftarTugas: StateFlow<List<Tugas>> = _daftarTugas.asStateFlow()
+    val daftarTugas = _daftarTugas.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -26,19 +25,13 @@ class TugasViewModel(context: Context) : ViewModel() {
     private val _notificationSettings = MutableStateFlow(NotificationSettings())
     val notificationSettings = _notificationSettings.asStateFlow()
 
-    private val _kategoriTugasList = MutableStateFlow<List<Kategori>>(
-        listOf(
-            Kategori("Individu", NeonCyan.toArgb()),
-            Kategori("Kelompok", NeonMagenta.toArgb())
-        )
+    private val _kategoriTugasList = MutableStateFlow(
+        listOf(Kategori("Individu", NeonCyan.toArgb()), Kategori("Kelompok", NeonMagenta.toArgb()))
     )
     val kategoriTugasList = _kategoriTugasList.asStateFlow()
 
-    private val _kategoriMatkulList = MutableStateFlow<List<Kategori>>(
-        listOf(
-            Kategori("Teori", NeonCyan.toArgb()),
-            Kategori("Praktikum", NeonPurple.toArgb())
-        )
+    private val _kategoriMatkulList = MutableStateFlow(
+        listOf(Kategori("Teori", NeonCyan.toArgb()), Kategori("Praktikum", NeonPurple.toArgb()))
     )
     val kategoriMatkulList = _kategoriMatkulList.asStateFlow()
 
@@ -50,80 +43,49 @@ class TugasViewModel(context: Context) : ViewModel() {
     private val fileKategoriTugas = File(context.filesDir, "kategori_tugas_v2.json")
     private val fileKategoriMatkul = File(context.filesDir, "kategori_matkul_v2.json")
     private val fileSettings = File(context.filesDir, "notification_settings.json")
-    
     private val workManager = WorkManager.getInstance(context)
 
-    init {
-        loadData()
-    }
+    init { loadData() }
+
+    private inline fun <reified T> loadFromFile(file: File, default: T): T =
+        if (file.exists()) try { Json.decodeFromString(file.readText()) } catch (e: Exception) { default } else default
 
     private fun setupRecurringNotifications(settings: NotificationSettings) {
-        Log.d("TugasApp", "Setting up notifications: Mode=${settings.mode}")
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val totalMinutes = if (settings.mode == NotificationMode.INTERVAL) {
-            (settings.intervalHours * 60) + settings.intervalMinutes
-        } else {
-            15 // Cek tiap 15 menit untuk SPECIFIC_TIME
-        }
-
-        val workRequest = PeriodicWorkRequestBuilder<DeadlineWorker>(
-            maxOf(totalMinutes.toLong(), 15L), 
-            TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
+        val totalMinutes = if (settings.mode == NotificationMode.INTERVAL)
+            maxOf((settings.intervalHours * 60) + settings.intervalMinutes, 15).toLong()
+        else 15L
 
         workManager.enqueueUniquePeriodicWork(
             "deadline_reminder_work",
-            ExistingPeriodicWorkPolicy.UPDATE, 
-            workRequest
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<DeadlineWorker>(totalMinutes, TimeUnit.MINUTES)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.NOT_REQUIRED).build())
+                .build()
         )
-
-        // Pemicu instan untuk testing
-        val testRequest = OneTimeWorkRequestBuilder<DeadlineWorker>().build()
-        workManager.enqueue(testRequest)
-        
-        Log.d("TugasApp", "WorkManager enqueued with interval: $totalMinutes minutes")
+        workManager.enqueue(OneTimeWorkRequestBuilder<DeadlineWorker>().build())
+        Log.d("TugasApp", "WorkManager enqueued: mode=${settings.mode}, interval=${totalMinutes}m")
     }
 
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
-            if (fileTugas.exists()) {
-                try {
-                    val json = fileTugas.readText()
-                    _daftarTugas.value = Json.decodeFromString(json)
-                } catch (e: Exception) {
-                    _daftarTugas.value = emptyList()
-                }
-            }
-            if (fileSettings.exists()) {
-                try {
-                    val json = fileSettings.readText()
-                    val settings = Json.decodeFromString<NotificationSettings>(json)
-                    _notificationSettings.value = settings
-                    setupRecurringNotifications(settings)
-                } catch (e: Exception) {
-                    setupRecurringNotifications(NotificationSettings())
-                }
-            } else {
-                setupRecurringNotifications(NotificationSettings())
-            }
-            
-            if (fileKategoriTugas.exists()) {
-                try {
-                    val json = fileKategoriTugas.readText()
-                    _kategoriTugasList.value = Json.decodeFromString(json)
-                } catch (e: Exception) {}
-            }
-            if (fileKategoriMatkul.exists()) {
-                try {
-                    val json = fileKategoriMatkul.readText()
-                    _kategoriMatkulList.value = Json.decodeFromString(json)
-                } catch (e: Exception) {}
-            }
+            _daftarTugas.value = loadFromFile(fileTugas, emptyList())
+
+            val settings = loadFromFile(fileSettings, NotificationSettings())
+            _notificationSettings.value = settings
+            setupRecurringNotifications(settings)
+
+            _kategoriTugasList.value = loadFromFile(fileKategoriTugas, _kategoriTugasList.value)
+            _kategoriMatkulList.value = loadFromFile(fileKategoriMatkul, _kategoriMatkulList.value)
+        }
+    }
+
+    private fun saveData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                fileTugas.writeText(Json.encodeToString(_daftarTugas.value))
+                fileKategoriTugas.writeText(Json.encodeToString(_kategoriTugasList.value))
+                fileKategoriMatkul.writeText(Json.encodeToString(_kategoriMatkulList.value))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -135,96 +97,40 @@ class TugasViewModel(context: Context) : ViewModel() {
         }
     }
 
-    private fun saveData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                fileTugas.writeText(Json.encodeToString(_daftarTugas.value))
-                fileKategoriTugas.writeText(Json.encodeToString(_kategoriTugasList.value))
-                fileKategoriMatkul.writeText(Json.encodeToString(_kategoriMatkulList.value))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    fun tambahTugas(tugas: Tugas) { _daftarTugas.value += tugas; saveData() }
+    fun hapusTugas(id: String) { _daftarTugas.value = _daftarTugas.value.filter { it.id != id }; saveData() }
+    fun updateTugas(tugas: Tugas) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == tugas.id) tugas else it }; saveData() }
+    fun toggleReminderMute(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(reminderMuted = !it.reminderMuted) else it }; saveData() }
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    private fun updateKategori(flow: MutableStateFlow<List<Kategori>>, kategori: Kategori) {
+        if (kategori.nama.isNotBlank() && flow.value.none { it.nama == kategori.nama }) {
+            flow.value = flow.value + kategori; saveData()
         }
     }
 
-    fun tambahTugas(tugas: Tugas) {
-        _daftarTugas.value = _daftarTugas.value + tugas
-        saveData()
+    private fun removeKategori(flow: MutableStateFlow<List<Kategori>>, nama: String) {
+        flow.value = flow.value.filter { it.nama != nama }; saveData()
     }
 
-    fun hapusTugas(id: String) {
-        _daftarTugas.value = _daftarTugas.value.filter { it.id != id }
-        saveData()
-    }
+    fun tambahKategoriTugas(kategori: Kategori) = updateKategori(_kategoriTugasList, kategori)
+    fun hapusKategoriTugas(nama: String) = removeKategori(_kategoriTugasList, nama)
+    fun tambahKategoriMatkul(kategori: Kategori) = updateKategori(_kategoriMatkulList, kategori)
+    fun hapusKategoriMatkul(nama: String) = removeKategori(_kategoriMatkulList, nama)
 
-    fun updateTugas(updatedTugas: Tugas) {
-        _daftarTugas.value = _daftarTugas.value.map {
-            if (it.id == updatedTugas.id) updatedTugas else it
-        }
-        saveData()
-    }
-
-    fun toggleReminderMute(id: String) {
-        _daftarTugas.value = _daftarTugas.value.map {
-            if (it.id == id) it.copy(reminderMuted = !it.reminderMuted) else it
-        }
-        saveData()
-    }
-
-    fun tambahKategoriTugas(kategori: Kategori) {
-        if (kategori.nama.isNotBlank() && _kategoriTugasList.value.none { it.nama == kategori.nama }) {
-            _kategoriTugasList.value = _kategoriTugasList.value + kategori
-            saveData()
-        }
-    }
-
-    fun hapusKategoriTugas(nama: String) {
-        _kategoriTugasList.value = _kategoriTugasList.value.filter { it.nama != nama }
-        saveData()
-    }
-
-    fun tambahKategoriMatkul(kategori: Kategori) {
-        if (kategori.nama.isNotBlank() && _kategoriMatkulList.value.none { it.nama == kategori.nama }) {
-            _kategoriMatkulList.value = _kategoriMatkulList.value + kategori
-            saveData()
-        }
-    }
-
-    fun hapusKategoriMatkul(nama: String) {
-        _kategoriMatkulList.value = _kategoriMatkulList.value.filter { it.nama != nama }
-        saveData()
-    }
-
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun sortByNama() {
-        _daftarTugas.value = _daftarTugas.value.sortedBy { it.namaMatkul.lowercase() }
-    }
-
+    fun sortByNama() { _daftarTugas.value = _daftarTugas.value.sortedBy { it.namaMatkul.lowercase() } }
     fun sortByDeadline() {
-        _daftarTugas.value = _daftarTugas.value.sortedBy { tugas ->
-            val parts = tugas.deadline.split("-")
-            if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else tugas.deadline
+        _daftarTugas.value = _daftarTugas.value.sortedBy {
+            it.deadline.split("-").takeIf { p -> p.size == 3 }?.let { p -> "${p[2]}-${p[1]}-${p[0]}" } ?: it.deadline
         }
     }
-
-    fun sortByKategoriTugas() {
-        _daftarTugas.value = _daftarTugas.value.sortedBy { it.kategoriTugas }
-    }
-
-    fun sortByKategoriMatkul() {
-        _daftarTugas.value = _daftarTugas.value.sortedBy { it.kategoriMatkul }
-    }
+    fun sortByKategoriTugas() { _daftarTugas.value = _daftarTugas.value.sortedBy { it.kategoriTugas } }
+    fun sortByKategoriMatkul() { _daftarTugas.value = _daftarTugas.value.sortedBy { it.kategoriMatkul } }
 }
 
 class TugasViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TugasViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TugasViewModel(context) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        if (modelClass.isAssignableFrom(TugasViewModel::class.java)) TugasViewModel(context) as T
+        else throw IllegalArgumentException("Unknown ViewModel class")
 }

@@ -24,6 +24,41 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
+private fun isDeadlineNear(deadline: String): Boolean = try {
+    ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.parse(deadline, DateTimeFormatter.ofPattern("dd-MM-yyyy"))) <= 1L
+} catch (e: Exception) { false }
+
+@Composable
+private fun MuteButton(muted: Boolean, onClick: () -> Unit) {
+    val color = if (muted) Color.Gray else NeonRed
+    Surface(
+        modifier = Modifier.clickable { onClick() },
+        color = color.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, color)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                if (muted) Icons.Default.NotificationsOff else Icons.Default.NotificationsActive,
+                contentDescription = null,
+                modifier = Modifier.size(10.dp),
+                tint = color
+            )
+            Text(
+                text = if (muted) "NOTIF OFF" else "BERHENTI NOTIF",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                color = color,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TugasCardNeon(
@@ -35,46 +70,23 @@ fun TugasCardNeon(
     onToggleMute: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val rotationState by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f, label = "rotation"
+    val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
+    val alpha by rememberInfiniteTransition(label = "borderTransition").animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse),
+        label = "borderAlpha"
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "borderTransition")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "borderAlpha"
-    )
-
-    val isNearDeadline = remember(tugas.deadline) {
-        try {
-            val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
-            val deadlineDate = LocalDate.parse(tugas.deadline, formatter)
-            val today = LocalDate.now()
-            ChronoUnit.DAYS.between(today, deadlineDate) <= 1L
-        } catch (e: Exception) {
-            false
-        }
-    }
-    val deadlineTextColor = if (isNearDeadline) NeonRed else Color.White
+    val isNearDeadline = remember(tugas.deadline) { isDeadlineNear(tugas.deadline) }
+    val accentColor = if (isNearDeadline) NeonRed else baseColor
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
-            .neonGlow(if (isNearDeadline) NeonRed else baseColor, alpha = 0.2f * alpha)
+            .animateContentSize(spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
+            .neonGlow(accentColor, alpha = 0.2f * alpha)
             .border(
-                BorderStroke(1.dp, Brush.linearGradient(
-                    listOf((if (isNearDeadline) NeonRed else baseColor).copy(alpha = alpha), Color.Transparent)
-                )),
+                BorderStroke(1.dp, Brush.linearGradient(listOf(accentColor.copy(alpha = alpha), Color.Transparent))),
                 shape = RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark.copy(alpha = 0.7f)),
@@ -98,7 +110,7 @@ fun TugasCardNeon(
                     Text(
                         text = "DEADLINE: ${tugas.deadline}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = deadlineTextColor,
+                        color = if (isNearDeadline) NeonRed else Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -124,46 +136,10 @@ fun TugasCardNeon(
                 ) {
                     NeonBadge(text = tugas.kategoriTugas, color = baseColor)
                     NeonBadge(text = tugas.kategoriMatkul, color = catColor)
-                    if (isNearDeadline) {
-                        Surface(
-                            modifier = Modifier.clickable { onToggleMute() },
-                            color = if (tugas.reminderMuted) Color.Gray.copy(alpha = 0.2f) else NeonRed.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, if (tugas.reminderMuted) Color.Gray else NeonRed)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    if (tugas.reminderMuted) Icons.Default.NotificationsOff else Icons.Default.NotificationsActive,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(10.dp),
-                                    tint = if (tugas.reminderMuted) Color.Gray else NeonRed
-                                )
-                                Text(
-                                    text = if (tugas.reminderMuted) "NOTIF OFF" else "BERHENTI NOTIF",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (tugas.reminderMuted) Color.Gray else NeonRed,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                    }
+                    if (isNearDeadline) MuteButton(muted = tugas.reminderMuted, onClick = onToggleMute)
                 }
-
-                IconButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Expand",
-                        tint = baseColor,
-                        modifier = Modifier.rotate(rotationState)
-                    )
+                IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expand", tint = baseColor, modifier = Modifier.rotate(rotation))
                 }
             }
 
@@ -171,14 +147,9 @@ fun TugasCardNeon(
                 Column(modifier = Modifier.padding(top = 16.dp)) {
                     HorizontalDivider(color = baseColor.copy(alpha = 0.2f))
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text("DESCRIPTION", style = MaterialTheme.typography.labelSmall, color = baseColor, fontWeight = FontWeight.Black)
                     Text(
-                        text = "DESCRIPTION",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = baseColor,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        text = if (tugas.deskripsi.isNotBlank()) tugas.deskripsi else "No description provided.",
+                        text = tugas.deskripsi.ifBlank { "No description provided." },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.padding(top = 4.dp)

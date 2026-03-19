@@ -40,10 +40,10 @@ fun Modifier.neonGlow(
     borderRadius: Dp = 16.dp,
     glowRadius: Dp = 8.dp,
     alpha: Float = 0.5f
-) = this.drawBehind {
+) = drawBehind {
     val paint = Paint().asFrameworkPaint().apply {
         this.color = color.copy(alpha = alpha).toArgb()
-        this.setShadowLayer(glowRadius.toPx(), 0f, 0f, color.toArgb())
+        setShadowLayer(glowRadius.toPx(), 0f, 0f, color.toArgb())
     }
     drawIntoCanvas {
         it.nativeCanvas.drawRoundRect(
@@ -105,6 +105,42 @@ fun ImmersiveDialog(onDismissRequest: () -> Unit, content: @Composable () -> Uni
 }
 
 @Composable
+private fun BoxScope.ScrollArrowButton(
+    visible: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    color: Color,
+    offset: Float,
+    alignment: Alignment,
+    padding: PaddingValues,
+    onClick: (() -> Unit)?
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier.align(alignment).padding(padding)
+    ) {
+        Surface(
+            modifier = Modifier
+                .size(40.dp)
+                .offset(y = offset.dp)
+                .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = onClick != null
+                ) { onClick?.invoke() },
+            shape = CircleShape,
+            color = color,
+            contentColor = Color.Black
+        ) {
+            Icon(icon, contentDescription = contentDescription, modifier = Modifier.padding(4.dp))
+        }
+    }
+}
+
+@Composable
 fun ScrollArrowsOverlay(
     canScrollBackward: Boolean,
     canScrollForward: Boolean,
@@ -112,8 +148,7 @@ fun ScrollArrowsOverlay(
     onUpClick: (() -> Unit)? = null,
     onDownClick: (() -> Unit)? = null
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "arrowAnim")
-    val arrowOffset by infiniteTransition.animateFloat(
+    val offset by rememberInfiniteTransition(label = "arrowAnim").animateFloat(
         initialValue = -4f,
         targetValue = 4f,
         animationSpec = infiniteRepeatable(
@@ -123,53 +158,26 @@ fun ScrollArrowsOverlay(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        AnimatedVisibility(
+        ScrollArrowButton(
             visible = canScrollBackward,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .size(40.dp)
-                    .offset(y = arrowOffset.dp)
-                    .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        enabled = onUpClick != null
-                    ) { onUpClick?.invoke() },
-                shape = CircleShape,
-                color = color,
-                contentColor = Color.Black
-            ) {
-                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Scroll Up", modifier = Modifier.padding(4.dp))
-            }
-        }
-
-        AnimatedVisibility(
+            icon = Icons.Default.KeyboardArrowUp,
+            contentDescription = "Scroll Up",
+            color = color,
+            offset = offset,
+            alignment = Alignment.TopCenter,
+            padding = PaddingValues(top = 8.dp),
+            onClick = onUpClick
+        )
+        ScrollArrowButton(
             visible = canScrollForward,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .size(40.dp)
-                    .offset(y = arrowOffset.dp)
-                    .neonGlow(color, borderRadius = 20.dp, glowRadius = 6.dp, alpha = 0.4f)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        enabled = onDownClick != null
-                    ) { onDownClick?.invoke() },
-                shape = CircleShape,
-                color = color,
-                contentColor = Color.Black
-            ) {
-                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Scroll Down", modifier = Modifier.padding(4.dp))
-            }
-        }
+            icon = Icons.Default.KeyboardArrowDown,
+            contentDescription = "Scroll Down",
+            color = color,
+            offset = offset,
+            alignment = Alignment.BottomCenter,
+            padding = PaddingValues(bottom = 8.dp),
+            onClick = onDownClick
+        )
     }
 }
 

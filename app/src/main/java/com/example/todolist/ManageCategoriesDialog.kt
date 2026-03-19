@@ -22,18 +22,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ManageCategoriesDialog(
-    viewModel: TugasViewModel,
-    onDismiss: () -> Unit
-) {
+fun ManageCategoriesDialog(viewModel: TugasViewModel, onDismiss: () -> Unit) {
     val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
     val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
-
-    var newKategoriTugas by remember { mutableStateOf("") }
-    var newKategoriMatkul by remember { mutableStateOf("") }
-    var selectedColorTugas by remember { mutableStateOf(NeonCyan) }
-    var selectedColorMatkul by remember { mutableStateOf(NeonCyan) }
-
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<String?>(null) }
     var deleteType by remember { mutableStateOf("") }
@@ -48,11 +39,7 @@ fun ManageCategoriesDialog(
             title = { Text("MANAGE CATEGORIES", color = NeonCyan, fontWeight = FontWeight.Black) },
             text = {
                 val scrollState = rememberScrollState()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -60,85 +47,23 @@ fun ManageCategoriesDialog(
                             .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        // Task Types Section
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("TASK TYPES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            ColorSelector(selectedColor = selectedColorTugas, onColorSelected = { selectedColorTugas = it })
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(
-                                    value = newKategoriTugas,
-                                    onValueChange = { newKategoriTugas = it },
-                                    placeholder = { Text("New Type", fontSize = 12.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White
-                                    )
-                                )
-                                IconButton(
-                                    onClick = {
-                                        if (newKategoriTugas.isNotBlank()) {
-                                            viewModel.tambahKategoriTugas(Kategori(newKategoriTugas, selectedColorTugas.toArgb()))
-                                            newKategoriTugas = ""
-                                        }
-                                    },
-                                    modifier = Modifier.background(selectedColorTugas, CircleShape)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
-                                }
-                            }
-                            kategoriTugasList.forEach { kat ->
-                                CategoryListItem(
-                                    kategori = kat,
-                                    onDelete = {
-                                        categoryToDelete = kat.nama
-                                        deleteType = "Task"
-                                        showDeleteConfirm = true
-                                    }
-                                )
-                            }
-                        }
+                        CategorySection(
+                            title = "TASK TYPES",
+                            list = kategoriTugasList,
+                            onAdd = { viewModel.tambahKategoriTugas(it) },
+                            onDelete = { categoryToDelete = it; deleteType = "Task"; showDeleteConfirm = true },
+                            placeholder = "New Type"
+                        )
 
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
 
-                        // Task Categories Section
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("TASK CATEGORIES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            ColorSelector(selectedColor = selectedColorMatkul, onColorSelected = { selectedColorMatkul = it })
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(
-                                    value = newKategoriMatkul,
-                                    onValueChange = { newKategoriMatkul = it },
-                                    placeholder = { Text("New Category", fontSize = 12.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White
-                                    )
-                                )
-                                IconButton(
-                                    onClick = {
-                                        if (newKategoriMatkul.isNotBlank()) {
-                                            viewModel.tambahKategoriMatkul(Kategori(newKategoriMatkul, selectedColorMatkul.toArgb()))
-                                            newKategoriMatkul = ""
-                                        }
-                                    },
-                                    modifier = Modifier.background(selectedColorMatkul, CircleShape)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
-                                }
-                            }
-                            kategoriMatkulList.forEach { kat ->
-                                CategoryListItem(
-                                    kategori = kat,
-                                    onDelete = {
-                                        categoryToDelete = kat.nama
-                                        deleteType = "Category"
-                                        showDeleteConfirm = true
-                                    }
-                                )
-                            }
-                        }
+                        CategorySection(
+                            title = "TASK CATEGORIES",
+                            list = kategoriMatkulList,
+                            onAdd = { viewModel.tambahKategoriMatkul(it) },
+                            onDelete = { categoryToDelete = it; deleteType = "Category"; showDeleteConfirm = true },
+                            placeholder = "New Category"
+                        )
                     }
                     ScrollArrowsOverlay(
                         canScrollBackward = scrollState.canScrollBackward,
@@ -150,31 +75,67 @@ fun ManageCategoriesDialog(
             },
             containerColor = SurfaceDark,
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxHeight(0.85f)
+            modifier = Modifier.padding(16.dp).fillMaxHeight(0.85f)
         )
     }
 
     if (showDeleteConfirm && categoryToDelete != null) {
+        val isTask = deleteType == "Task"
         DeleteConfirmationDialog(
-            onDismiss = {
-                showDeleteConfirm = false
-                categoryToDelete = null
-            },
+            onDismiss = { showDeleteConfirm = false; categoryToDelete = null },
             onConfirm = {
-                if (deleteType == "Task") viewModel.hapusKategoriTugas(categoryToDelete!!)
+                if (isTask) viewModel.hapusKategoriTugas(categoryToDelete!!)
                 else viewModel.hapusKategoriMatkul(categoryToDelete!!)
                 showDeleteConfirm = false
                 categoryToDelete = null
             },
-            title = if (deleteType == "Task") "DELETE TASK TYPE" else "DELETE TASK CATEGORY",
-            message = if (deleteType == "Task") {
+            title = if (isTask) "DELETE TASK TYPE" else "DELETE TASK CATEGORY",
+            message = if (isTask)
                 "Are you sure you want to delete the '$categoryToDelete' task type? This action cannot be undone."
-            } else {
+            else
                 "Are you sure you want to delete the '$categoryToDelete' category? This action cannot be undone."
-            }
         )
+    }
+}
+
+@Composable
+private fun CategorySection(
+    title: String,
+    list: List<Kategori>,
+    onAdd: (Kategori) -> Unit,
+    onDelete: (String) -> Unit,
+    placeholder: String
+) {
+    var newName by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(NeonCyan) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        ColorSelector(selectedColor = selectedColor, onColorSelected = { selectedColor = it })
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = newName,
+                onValueChange = { newName = it },
+                placeholder = { Text(placeholder, fontSize = 12.sp) },
+                modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+            IconButton(
+                onClick = {
+                    if (newName.isNotBlank()) {
+                        onAdd(Kategori(newName, selectedColor.toArgb()))
+                        newName = ""
+                    }
+                },
+                modifier = Modifier.background(selectedColor, CircleShape)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
+            }
+        }
+        list.forEach { kat -> CategoryListItem(kategori = kat, onDelete = { onDelete(kat.nama) }) }
     }
 }
 
@@ -185,10 +146,7 @@ private fun CategoryListItem(kategori: Kategori, onDelete: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(modifier = Modifier.size(10.dp).background(Color(kategori.warna), CircleShape))
             Text(kategori.nama, color = Color.White.copy(alpha = 0.8f))
         }

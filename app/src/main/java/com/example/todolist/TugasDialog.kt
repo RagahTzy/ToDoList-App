@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TugasDialog(
     viewModel: TugasViewModel,
@@ -32,23 +31,22 @@ fun TugasDialog(
 ) {
     var namaMatkul by remember { mutableStateOf(tugas?.namaMatkul ?: "") }
     var deskripsi by remember { mutableStateOf(tugas?.deskripsi ?: "") }
-    val initialDate = tugas?.deadline?.split("-") ?: listOf("", "", "")
-    var selectedDay by remember { mutableStateOf(initialDate.getOrNull(0) ?: "01") }
-    var selectedMonth by remember { mutableStateOf(initialDate.getOrNull(1) ?: "01") }
-    var selectedYear by remember { mutableStateOf(initialDate.getOrNull(2) ?: "2025") }
+    val dateParts = tugas?.deadline?.split("-")
+    var selectedDay by remember { mutableStateOf(dateParts?.getOrNull(0) ?: "01") }
+    var selectedMonth by remember { mutableStateOf(dateParts?.getOrNull(1) ?: "01") }
+    var selectedYear by remember { mutableStateOf(dateParts?.getOrNull(2) ?: "2025") }
 
     val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
     val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
 
-    var kategoriTugas by remember { mutableStateOf(tugas?.kategoriTugas ?: if (kategoriTugasList.isNotEmpty()) kategoriTugasList[0].nama else "") }
-    var kategoriMatkul by remember { mutableStateOf(tugas?.kategoriMatkul ?: if (kategoriMatkulList.isNotEmpty()) kategoriMatkulList[0].nama else "") }
+    var kategoriTugas by remember { mutableStateOf(tugas?.kategoriTugas ?: kategoriTugasList.firstOrNull()?.nama ?: "") }
+    var kategoriMatkul by remember { mutableStateOf(tugas?.kategoriMatkul ?: kategoriMatkulList.firstOrNull()?.nama ?: "") }
 
     var showKategoriTugasSelector by remember { mutableStateOf(false) }
     var showKategoriMatkulSelector by remember { mutableStateOf(false) }
 
     val currentTypeColor = Color(kategoriTugasList.find { it.nama == kategoriTugas }?.warna ?: NeonCyan.toArgb())
     val currentCatColor = Color(kategoriMatkulList.find { it.nama == kategoriMatkul }?.warna ?: NeonCyan.toArgb())
-
     val scope = rememberCoroutineScope()
 
     ImmersiveDialog(onDismissRequest = onDismiss) {
@@ -60,9 +58,7 @@ fun TugasDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.neonGlow(NeonCyan, borderRadius = 12.dp, glowRadius = 6.dp)
-                ) {
-                    Text("SAVE TASK", fontWeight = FontWeight.Bold)
-                }
+                ) { Text("SAVE TASK", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.Gray) }
@@ -120,24 +116,16 @@ fun TugasDialog(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("DEADLINE (Day/Month/Year)", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                SimpleDropdown(options = viewModel.days, selected = selectedDay, onSelected = { selectedDay = it }, modifier = Modifier.weight(1f))
-                                SimpleDropdown(options = viewModel.months, selected = selectedMonth, onSelected = { selectedMonth = it }, modifier = Modifier.weight(1f))
-                                SimpleDropdown(options = viewModel.years, selected = selectedYear, onSelected = { selectedYear = it }, modifier = Modifier.weight(1.2f))
+                                SimpleDropdown(viewModel.days, selectedDay, { selectedDay = it }, Modifier.weight(1f))
+                                SimpleDropdown(viewModel.months, selectedMonth, { selectedMonth = it }, Modifier.weight(1f))
+                                SimpleDropdown(viewModel.years, selectedYear, { selectedYear = it }, Modifier.weight(1.2f))
                             }
                         }
 
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("CATEGORIES", style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
-                            CategoryButton(
-                                label = "Type: $kategoriTugas",
-                                color = currentTypeColor,
-                                onClick = { showKategoriTugasSelector = true }
-                            )
-                            CategoryButton(
-                                label = "Category: $kategoriMatkul",
-                                color = currentCatColor,
-                                onClick = { showKategoriMatkulSelector = true }
-                            )
+                            CategoryButton("Type: $kategoriTugas", currentTypeColor) { showKategoriTugasSelector = true }
+                            CategoryButton("Category: $kategoriMatkul", currentCatColor) { showKategoriMatkulSelector = true }
                         }
                     }
                     ScrollArrowsOverlay(
@@ -178,9 +166,7 @@ fun TugasDialog(
 @Composable
 fun CategoryButton(label: String, color: Color, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         color = SurfaceDark,
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, color.copy(alpha = 0.5f))
@@ -221,9 +207,7 @@ fun CategorySelectionDialog(
                     ) {
                         options.forEach { option ->
                             Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSelected(option) },
+                                modifier = Modifier.fillMaxWidth().clickable { onSelected(option) },
                                 color = SurfaceDark.copy(alpha = 0.5f),
                                 shape = RoundedCornerShape(8.dp),
                                 border = BorderStroke(1.dp, Color(option.warna).copy(alpha = 0.5f))
@@ -234,7 +218,7 @@ fun CategorySelectionDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Box(modifier = Modifier.size(12.dp).background(Color(option.warna), CircleShape))
-                                    Text(text = option.nama, color = Color.White, fontWeight = FontWeight.Medium)
+                                    Text(option.nama, color = Color.White, fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
