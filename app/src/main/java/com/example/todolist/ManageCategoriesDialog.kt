@@ -23,8 +23,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ManageCategoriesDialog(viewModel: TugasViewModel, onDismiss: () -> Unit) {
+    // Hanya tampilkan yang tidak deleted
     val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
     val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
+    val activeKategoriTugas = kategoriTugasList.filter { !it.isDeleted }
+    val activeKategoriMatkul = kategoriMatkulList.filter { !it.isDeleted }
+
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<String?>(null) }
     var deleteType by remember { mutableStateOf("") }
@@ -49,17 +53,15 @@ fun ManageCategoriesDialog(viewModel: TugasViewModel, onDismiss: () -> Unit) {
                     ) {
                         CategorySection(
                             title = "TASK TYPES",
-                            list = kategoriTugasList,
+                            list = activeKategoriTugas,
                             onAdd = { viewModel.tambahKategoriTugas(it) },
                             onDelete = { categoryToDelete = it; deleteType = "Task"; showDeleteConfirm = true },
                             placeholder = "New Type"
                         )
-
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
-
                         CategorySection(
                             title = "TASK CATEGORIES",
-                            list = kategoriMatkulList,
+                            list = activeKategoriMatkul,
                             onAdd = { viewModel.tambahKategoriMatkul(it) },
                             onDelete = { categoryToDelete = it; deleteType = "Category"; showDeleteConfirm = true },
                             placeholder = "New Category"
@@ -91,9 +93,9 @@ fun ManageCategoriesDialog(viewModel: TugasViewModel, onDismiss: () -> Unit) {
             },
             title = if (isTask) "DELETE TASK TYPE" else "DELETE TASK CATEGORY",
             message = if (isTask)
-                "Are you sure you want to delete the '$categoryToDelete' task type? This action cannot be undone."
+                "Are you sure you want to delete the '${categoryToDelete}' task type? It will be moved to the archive."
             else
-                "Are you sure you want to delete the '$categoryToDelete' category? This action cannot be undone."
+                "Are you sure you want to delete the '${categoryToDelete}' category? It will be moved to the archive."
         )
     }
 }
@@ -135,23 +137,20 @@ private fun CategorySection(
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
             }
         }
-        list.forEach { kat -> CategoryListItem(kategori = kat, onDelete = { onDelete(kat.nama) }) }
-    }
-}
-
-@Composable
-private fun CategoryListItem(kategori: Kategori, onDelete: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(modifier = Modifier.size(10.dp).background(Color(kategori.warna), CircleShape))
-            Text(kategori.nama, color = Color.White.copy(alpha = 0.8f))
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+        list.forEach { kat ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(modifier = Modifier.size(10.dp).background(Color(kat.warna), CircleShape))
+                    Text(kat.nama, color = Color.White.copy(alpha = 0.8f))
+                }
+                IconButton(onClick = { onDelete(kat.nama) }) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                }
+            }
         }
     }
 }

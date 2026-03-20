@@ -35,6 +35,9 @@ class TugasViewModel(context: Context) : ViewModel() {
     )
     val kategoriMatkulList = _kategoriMatkulList.asStateFlow()
 
+    private val _daftarCatatan = MutableStateFlow<List<Catatan>>(emptyList())
+    val daftarCatatan = _daftarCatatan.asStateFlow()
+
     val days = (1..31).map { it.toString().padStart(2, '0') }
     val months = (1..12).map { it.toString().padStart(2, '0') }
     val years = (2025..2035).map { it.toString() }
@@ -43,6 +46,7 @@ class TugasViewModel(context: Context) : ViewModel() {
     private val fileKategoriTugas = File(context.filesDir, "kategori_tugas_v2.json")
     private val fileKategoriMatkul = File(context.filesDir, "kategori_matkul_v2.json")
     private val fileSettings = File(context.filesDir, "notification_settings.json")
+    private val fileCatatan = File(context.filesDir, "catatan.json")
     private val workManager = WorkManager.getInstance(context)
 
     init { loadData() }
@@ -69,13 +73,12 @@ class TugasViewModel(context: Context) : ViewModel() {
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
             _daftarTugas.value = loadFromFile(fileTugas, emptyList())
-
             val settings = loadFromFile(fileSettings, NotificationSettings())
             _notificationSettings.value = settings
             setupRecurringNotifications(settings)
-
             _kategoriTugasList.value = loadFromFile(fileKategoriTugas, _kategoriTugasList.value)
             _kategoriMatkulList.value = loadFromFile(fileKategoriMatkul, _kategoriMatkulList.value)
+            _daftarCatatan.value = loadFromFile(fileCatatan, emptyList())
         }
     }
 
@@ -89,6 +92,13 @@ class TugasViewModel(context: Context) : ViewModel() {
         }
     }
 
+    private fun saveCatatan() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { fileCatatan.writeText(Json.encodeToString(_daftarCatatan.value)) }
+            catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     fun updateNotificationSettings(settings: NotificationSettings) {
         _notificationSettings.value = settings
         viewModelScope.launch(Dispatchers.IO) {
@@ -97,29 +107,124 @@ class TugasViewModel(context: Context) : ViewModel() {
         }
     }
 
+    // --- Tugas ---
     fun tambahTugas(tugas: Tugas) { _daftarTugas.value += tugas; saveData() }
-    fun hapusTugas(id: String) { _daftarTugas.value = _daftarTugas.value.filter { it.id != id }; saveData() }
-    fun updateTugas(tugas: Tugas) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == tugas.id) tugas else it }; saveData() }
-    fun toggleReminderMute(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(reminderMuted = !it.reminderMuted) else it }; saveData() }
-    fun completeTugas(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = true) else it }; saveData() }
-    fun restoreTugas(id: String) { _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = false) else it }; saveData() }
+
+    // Soft delete — pindah ke deleted
+    fun hapusTugas(id: String) {
+        _daftarTugas.value = _daftarTugas.value.map {
+            if (it.id == id) it.copy(isDeleted = true) else it
+        }
+        saveData()
+    }
+
+    // Permanent delete dari arsip
+    fun hapusTugasPermanen(id: String) {
+        _daftarTugas.value = _daftarTugas.value.filter { it.id != id }
+        saveData()
+    }
+
+    fun restoreDeletedTugas(id: String) {
+        _daftarTugas.value = _daftarTugas.value.map {
+            if (it.id == id) it.copy(isDeleted = false) else it
+        }
+        saveData()
+    }
+
+    fun updateTugas(tugas: Tugas) {
+        _daftarTugas.value = _daftarTugas.value.map { if (it.id == tugas.id) tugas else it }
+        saveData()
+    }
+
+    fun toggleReminderMute(id: String) {
+        _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(reminderMuted = !it.reminderMuted) else it }
+        saveData()
+    }
+
+    fun completeTugas(id: String) {
+        _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = true) else it }
+        saveData()
+    }
+
+    fun restoreTugas(id: String) {
+        _daftarTugas.value = _daftarTugas.value.map { if (it.id == id) it.copy(isCompleted = false) else it }
+        saveData()
+    }
+
+    fun toggleSubTugas(tugasId: String, subTugasId: String) {
+        _daftarTugas.value = _daftarTugas.value.map { tugas ->
+            if (tugas.id != tugasId) tugas
+            else tugas.copy(
+                subTugasList = tugas.subTugasList.map { sub ->
+                    if (sub.id == subTugasId) sub.copy(isCompleted = !sub.isCompleted) else sub
+                }
+            )
+        }
+        saveData()
+    }
+
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
+    // --- Catatan ---
+    fun tambahCatatan(catatan: Catatan) { _daftarCatatan.value += catatan; saveCatatan() }
+
+    fun hapusCatatan(id: String) {
+        _daftarCatatan.value = _daftarCatatan.value.map {
+            if (it.id == id) it.copy(isDeleted = true) else it
+        }
+        saveCatatan()
+    }
+
+    fun hapusCatatanPermanen(id: String) {
+        _daftarCatatan.value = _daftarCatatan.value.filter { it.id != id }
+        saveCatatan()
+    }
+
+    fun restoreDeletedCatatan(id: String) {
+        _daftarCatatan.value = _daftarCatatan.value.map {
+            if (it.id == id) it.copy(isDeleted = false) else it
+        }
+        saveCatatan()
+    }
+
+    fun updateCatatan(catatan: Catatan) {
+        _daftarCatatan.value = _daftarCatatan.value.map { if (it.id == catatan.id) catatan else it }
+        saveCatatan()
+    }
+
+    // --- Kategori ---
     private fun updateKategori(flow: MutableStateFlow<List<Kategori>>, kategori: Kategori) {
         if (kategori.nama.isNotBlank() && flow.value.none { it.nama == kategori.nama }) {
             flow.value = flow.value + kategori; saveData()
         }
     }
 
-    private fun removeKategori(flow: MutableStateFlow<List<Kategori>>, nama: String) {
-        flow.value = flow.value.filter { it.nama != nama }; saveData()
+    private fun softDeleteKategori(flow: MutableStateFlow<List<Kategori>>, nama: String) {
+        flow.value = flow.value.map { if (it.nama == nama) it.copy(isDeleted = true) else it }
+        saveData()
+    }
+
+    private fun restoreKategori(flow: MutableStateFlow<List<Kategori>>, nama: String) {
+        flow.value = flow.value.map { if (it.nama == nama) it.copy(isDeleted = false) else it }
+        saveData()
+    }
+
+    private fun permanentDeleteKategori(flow: MutableStateFlow<List<Kategori>>, nama: String) {
+        flow.value = flow.value.filter { it.nama != nama }
+        saveData()
     }
 
     fun tambahKategoriTugas(kategori: Kategori) = updateKategori(_kategoriTugasList, kategori)
-    fun hapusKategoriTugas(nama: String) = removeKategori(_kategoriTugasList, nama)
-    fun tambahKategoriMatkul(kategori: Kategori) = updateKategori(_kategoriMatkulList, kategori)
-    fun hapusKategoriMatkul(nama: String) = removeKategori(_kategoriMatkulList, nama)
+    fun hapusKategoriTugas(nama: String) = softDeleteKategori(_kategoriTugasList, nama)
+    fun restoreKategoriTugas(nama: String) = restoreKategori(_kategoriTugasList, nama)
+    fun hapusKategoriTugasPermanen(nama: String) = permanentDeleteKategori(_kategoriTugasList, nama)
 
+    fun tambahKategoriMatkul(kategori: Kategori) = updateKategori(_kategoriMatkulList, kategori)
+    fun hapusKategoriMatkul(nama: String) = softDeleteKategori(_kategoriMatkulList, nama)
+    fun restoreKategoriMatkul(nama: String) = restoreKategori(_kategoriMatkulList, nama)
+    fun hapusKategoriMatkulPermanen(nama: String) = permanentDeleteKategori(_kategoriMatkulList, nama)
+
+    // Sort
     fun sortByNama() { _daftarTugas.value = _daftarTugas.value.sortedBy { it.namaMatkul.lowercase() } }
     fun sortByDeadline() {
         _daftarTugas.value = _daftarTugas.value.sortedBy {

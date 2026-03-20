@@ -210,3 +210,46 @@ fun DeleteConfirmationDialog(
         )
     }
 }
+
+@Composable
+fun RestoreConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    title: String,
+    message: String
+) {
+    ImmersiveDialog(onDismissRequest = onDismiss) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = Color.Black),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("RESTORE", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.Gray) }
+            },
+            title = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                    color = NeonGreen,
+                    letterSpacing = 2.sp
+                )
+            },
+            text = {
+                Text(text = message, color = Color.White.copy(alpha = 0.8f))
+            },
+            containerColor = SurfaceDark,
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .border(BorderStroke(1.dp, NeonGreen.copy(alpha = 0.5f)), RoundedCornerShape(28.dp))
+        )
+    }
+}

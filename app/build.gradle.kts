@@ -62,6 +62,8 @@ dependencies {
     implementation(libs.material)
     implementation(libs.kotlinx.serialization.json)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.compose.markdown)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

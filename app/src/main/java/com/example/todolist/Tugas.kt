@@ -4,6 +4,13 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable
+data class SubTugas(
+    val id: String = UUID.randomUUID().toString(),
+    val nama: String,
+    val isCompleted: Boolean = false
+)
+
+@Serializable
 data class Tugas(
     val id: String = UUID.randomUUID().toString(),
     val namaMatkul: String,
@@ -12,5 +19,7 @@ data class Tugas(
     val kategoriMatkul: String,
     val deskripsi: String = "",
     val reminderMuted: Boolean = false,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val isDeleted: Boolean = false,
+    val subTugasList: List<SubTugas> = emptyList()
 )

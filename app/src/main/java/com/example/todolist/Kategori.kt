@@ -5,5 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Kategori(
     val nama: String,
-    val warna: Int // Argb value
+    val warna: Int,
+    val isDeleted: Boolean = false
 )
