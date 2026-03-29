@@ -75,7 +75,8 @@ fun ScrollArrowsOverlay(
     canScrollForward: Boolean,
     color: Color = NeonCyan,
     onUpClick: (() -> Unit)? = null,
-    onDownClick: (() -> Unit)? = null
+    onDownClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     val offset by rememberInfiniteTransition(label = "arrowAnim").animateFloat(
         initialValue = -4f,
@@ -86,7 +87,7 @@ fun ScrollArrowsOverlay(
         ), label = "arrowOffset"
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         ScrollArrowButton(
             visible = canScrollBackward,
             icon = Icons.Default.KeyboardArrowUp,

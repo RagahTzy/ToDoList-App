@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val viewModel: TugasViewModel by viewModels { TugasViewModelFactory(applicationContext) }
+        val musicViewModel: MusicViewModel by viewModels()
         setContent {
             ToDoListTheme(darkTheme = true) {
                 val context = LocalContext.current
@@ -65,7 +66,7 @@ class MainActivity : ComponentActivity() {
                         launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
                 Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-                    AppNavigation(viewModel)
+                    AppNavigation(viewModel, musicViewModel)
                 }
             }
         }
@@ -73,11 +74,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation(viewModel: TugasViewModel) {
+fun AppNavigation(viewModel: TugasViewModel, musicViewModel: MusicViewModel) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "main") {
         composable("main") {
-            TugasApp(viewModel = viewModel, onNavigateToCatatan = { navController.navigate("catatan_display/$it") })
+            TugasApp(
+                viewModel = viewModel,
+                musicViewModel = musicViewModel,
+                onNavigateToCatatan = { navController.navigate("catatan_display/$it") }
+            )
         }
         composable("catatan_display/{catatanId}") { backStackEntry ->
             val catatanId = backStackEntry.arguments?.getString("catatanId") ?: return@composable
@@ -88,14 +93,18 @@ fun AppNavigation(viewModel: TugasViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TugasApp(viewModel: TugasViewModel, onNavigateToCatatan: (String) -> Unit) {
+fun TugasApp(
+    viewModel: TugasViewModel,
+    musicViewModel: MusicViewModel,
+    onNavigateToCatatan: (String) -> Unit,
+) {
     val daftarTugas by viewModel.daftarTugas.collectAsState()
     val daftarCatatan by viewModel.daftarCatatan.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val kategoriTugasList by viewModel.kategoriTugasList.collectAsState()
     val kategoriMatkulList by viewModel.kategoriMatkulList.collectAsState()
 
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 5 })
     var showManageCategories by remember { mutableStateOf(false) }
     var showNotificationSettings by remember { mutableStateOf(false) }
     var selectedTugas by remember { mutableStateOf<Tugas?>(null) }
@@ -180,7 +189,7 @@ fun TugasApp(viewModel: TugasViewModel, onNavigateToCatatan: (String) -> Unit) {
                     },
                     title = {
                         Text(
-                            when (pagerState.currentPage) { 0 -> "TASK LIST"; 1 -> "ADD TASK"; 2 -> "NOTES"; else -> "ARCHIVE" },
+                            when (pagerState.currentPage) { 0 -> "TASK LIST"; 1 -> "ADD TASK"; 2 -> "NOTES"; 3 -> "ARCHIVE"; else -> "MUSIC" },
                             style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, letterSpacing = 4.sp, color = NeonCyan
                         )
                     },
@@ -211,6 +220,7 @@ fun TugasApp(viewModel: TugasViewModel, onNavigateToCatatan: (String) -> Unit) {
                     NavigationBarItem(selected = pagerState.currentPage == 1, onClick = { scope.launch { pagerState.animateScrollToPage(1) } }, icon = { Icon(Icons.Default.AddCircle, "Add Task") }, label = null, alwaysShowLabel = false, colors = NavigationBarItemDefaults.colors(selectedIconColor = NeonCyan, indicatorColor = Color.Transparent, unselectedIconColor = Color.White.copy(alpha = 0.4f)))
                     NavigationBarItem(selected = pagerState.currentPage == 2, onClick = { scope.launch { pagerState.animateScrollToPage(2) } }, icon = { Icon(Icons.AutoMirrored.Filled.Notes, "Notes", modifier = Modifier.size(22.dp)) }, label = null, alwaysShowLabel = false, colors = NavigationBarItemDefaults.colors(selectedIconColor = NeonCyan, indicatorColor = Color.Transparent, unselectedIconColor = Color.White.copy(alpha = 0.4f)))
                     NavigationBarItem(selected = pagerState.currentPage == 3, onClick = { scope.launch { pagerState.animateScrollToPage(3) } }, icon = { Icon(Icons.Default.Folder, "Archive", modifier = Modifier.size(20.dp)) }, label = null, alwaysShowLabel = false, colors = NavigationBarItemDefaults.colors(selectedIconColor = NeonCyan, indicatorColor = Color.Transparent, unselectedIconColor = Color.White.copy(alpha = 0.4f)))
+                    NavigationBarItem(selected = pagerState.currentPage == 4, onClick = { scope.launch { pagerState.animateScrollToPage(4) } }, icon = { Icon(Icons.Default.MusicNote, "Music") }, label = null, alwaysShowLabel = false, colors = NavigationBarItemDefaults.colors(selectedIconColor = NeonCyan, indicatorColor = Color.Transparent, unselectedIconColor = Color.White.copy(alpha = 0.4f)))
                 }
             }
         ) { padding ->
@@ -232,9 +242,9 @@ fun TugasApp(viewModel: TugasViewModel, onNavigateToCatatan: (String) -> Unit) {
                             kategoriTugasList = kategoriTugasList,
                             kategoriMatkulList = kategoriMatkulList,
                             daftarTugas = daftarTugas,
-                            viewModel = viewModel,
-                            onNavigateToCatatan = onNavigateToCatatan
+                            viewModel = viewModel
                         )
+                        4 -> MusicTab(viewModel = musicViewModel)
                     }
                 }
             }
@@ -317,8 +327,7 @@ fun ArchivedTab(
     kategoriTugasList: List<Kategori>,
     kategoriMatkulList: List<Kategori>,
     daftarTugas: List<Tugas>,
-    viewModel: TugasViewModel,
-    onNavigateToCatatan: (String) -> Unit
+    viewModel: TugasViewModel
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
