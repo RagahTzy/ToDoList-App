@@ -1,76 +1,78 @@
+---
+
 # Taskora
 
-> Aplikasi manajemen tugas Android bertemakan **Cyberpunk/Neon**, dibangun dengan Kotlin + Jetpack Compose.
+> An Android task management application with a **Cyberpunk/Neon** theme, built using Kotlin + Jetpack Compose.
 
 ---
 
-## Fitur Utama
+## Main Features
 
-- **Task Management** — Tambah, edit, hapus, dan selesaikan tugas dengan deadline
-- **Sub Tugas** — Pecah tugas menjadi bagian kecil dengan progress bar
-- **Catatan (Notes)** — Catatan berformat Markdown, bisa dilampirkan ke tugas atau sub tugas
-- **Arsip** — Tugas selesai, tugas terhapus, catatan terhapus, kategori terhapus — semua bisa di-restore
-- **Notifikasi Deadline** — Pengingat otomatis via WorkManager (mode interval atau jam tertentu)
-- **Kategori Kustom** — Kelola tipe dan kategori tugas dengan warna pilihan sendiri
-- **Music Player** — Putar audio lokal dengan playlist, shuffle, repeat, dan album art
-- **Pencarian & Pengurutan** — Filter dan sort tugas berdasarkan nama, deadline, atau kategori
-- **Markdown Guide** — Panduan lengkap penulisan Markdown tersedia dalam aplikasi
+* **Task Management** — Add, edit, delete, and complete tasks with deadlines
+* **Subtasks** — Break tasks into smaller parts with a progress bar
+* **Notes** — Markdown-formatted notes that can be attached to tasks or subtasks
+* **Archive** — Completed tasks, deleted tasks, deleted notes, and deleted categories — all can be restored
+* **Deadline Notifications** — Automatic reminders via WorkManager (interval mode or specific time)
+* **Custom Categories** — Manage task types and categories with your own color choices
+* **Music Player** — Play local audio with playlists, shuffle, repeat, and album art
+* **Search & Sorting** — Filter and sort tasks by name, deadline, or category
+* **Markdown Guide** — A complete Markdown writing guide available داخل the app
 
 ---
 
 ## Tech Stack
 
-| Kategori | Library |
-|----------|---------|
-| Bahasa | Kotlin |
-| UI | Jetpack Compose + Material 3 |
-| Arsitektur | MVVM + StateFlow |
-| Navigasi | Navigation Compose + HorizontalPager |
-| Background Task | WorkManager |
-| Serialisasi | kotlinx.serialization |
-| Audio | Media3 (ExoPlayer + MediaSession) |
-| Markdown | compose-markdown (jeziellago) |
-| Min SDK | 26 (Android 8.0) |
+| Category        | Library                              |
+| --------------- | ------------------------------------ |
+| Language        | Kotlin                               |
+| UI              | Jetpack Compose + Material 3         |
+| Architecture    | MVVM + StateFlow                     |
+| Navigation      | Navigation Compose + HorizontalPager |
+| Background Task | WorkManager                          |
+| Serialization   | kotlinx.serialization                |
+| Audio           | Media3 (ExoPlayer + MediaSession)    |
+| Markdown        | compose-markdown (jeziellago)        |
+| Min SDK         | 26 (Android 8.0)                     |
 
 ---
 
-## Arsitektur
+## Architecture
 
-Aplikasi menggunakan pola **MVVM**:
+The application uses the **MVVM** pattern:
 
 ```
 View (Composable)  ←→  ViewModel  ←→  File I/O (JSON)
 ```
 
-- **State** diekspos sebagai `StateFlow`, dikonsumsi via `collectAsState()`
-- **Persistensi** menggunakan file JSON di internal storage (tidak ada database eksternal)
-- **Soft delete** diterapkan di semua entitas — tidak ada penghapusan permanen tanpa konfirmasi eksplisit
+* **State** is exposed as `StateFlow`, consumed via `collectAsState()`
+* **Persistence** uses JSON files in internal storage (no external database)
+* **Soft delete** is applied to all entities — no permanent deletion without explicit confirmation
 
 ---
 
-## Struktur Proyek
+## Project Structure
 
 ```
 app/src/main/
 ├── java/.../todolist/
 │   ├── ui.theme/          # Color, Theme, Typography
-│   ├── Catatan.kt         # Data class: Catatan
-│   ├── CatatanScreen.kt   # UI: Tab Notes + Detail Screen
-│   ├── Colors.kt          # Palet warna Neon Cyberpunk
-│   ├── CommonComponents.kt# Komponen UI bersama
-│   ├── DeadlineWorker.kt  # WorkManager: cek deadline
-│   ├── Kategori.kt        # Data class: Kategori
-│   ├── Lagu.kt            # Data class: Lagu & Playlist
-│   ├── MainActivity.kt    # Entry point + tab utama
+│   ├── Catatan.kt         # Data class: Note
+│   ├── CatatanScreen.kt   # UI: Notes tab + Detail Screen
+│   ├── Colors.kt          # Neon Cyberpunk color palette
+│   ├── CommonComponents.kt# Shared UI components
+│   ├── DeadlineWorker.kt  # WorkManager: deadline checker
+│   ├── Kategori.kt        # Data class: Category
+│   ├── Lagu.kt            # Data class: Song & Playlist
+│   ├── MainActivity.kt    # Entry point + main tabs
 │   ├── MusicPlayerService.kt  # MediaSessionService
 │   ├── MusicScreen.kt     # UI: Music tab
-│   ├── MusicViewModel.kt  # ViewModel: musik
-│   ├── NotificationHelper.kt  # Helper notifikasi sistem
+│   ├── MusicViewModel.kt  # ViewModel: music
+│   ├── NotificationHelper.kt  # System notification helper
 │   ├── NotificationSettings.kt
-│   ├── Tugas.kt           # Data class: Tugas & SubTugas
-│   ├── TugasCard.kt       # Komponen kartu tugas
-│   ├── TugasDialog.kt     # Dialog tambah/edit tugas
-│   └── TugasViewModel.kt  # ViewModel utama
+│   ├── Tugas.kt           # Data class: Task & Subtask
+│   ├── TugasCard.kt       # Task card component
+│   ├── TugasDialog.kt     # Add/edit task dialog
+│   └── TugasViewModel.kt  # Main ViewModel
 └── res/
     ├── values/
     │   ├── colors.xml
@@ -82,116 +84,116 @@ app/src/main/
 
 ---
 
-## Navigasi
+## Navigation
 
 ```
 NavHost
 ├── "main" → TugasApp
-│    ├── Tab 0: Dashboard     (daftar tugas aktif)
-│    ├── Tab 1: Add Task      (form tambah tugas)
-│    ├── Tab 2: Notes         (catatan)
-│    ├── Tab 3: Archive       (arsip semua entitas)
+│    ├── Tab 0: Dashboard     (active task list)
+│    ├── Tab 1: Add Task      (task creation form)
+│    ├── Tab 2: Notes         (notes)
+│    ├── Tab 3: Archive       (all archived entities)
 │    └── Tab 4: Music         (music player)
 │
 └── "catatan_display/{id}" → CatatanDisplayScreen
 ```
 
-Navigasi antar tab menggunakan **HorizontalPager** (swipe kiri/kanan) dan bottom navigation bar. Menu drawer di kiri berisi pengaturan notifikasi, kelola kategori, dan panduan Markdown.
+Navigation between tabs uses **HorizontalPager** (swipe left/right) and a bottom navigation bar. The left drawer menu contains notification settings, category management, and a Markdown guide.
 
 ---
 
-## Model Data
+## Data Model
 
 ```kotlin
-Tugas
-├── id, namaMatkul, deadline ("dd-MM-yyyy")
-├── kategoriTugas, kategoriMatkul
-├── deskripsi (Markdown)
+Task
+├── id, subjectName, deadline ("dd-MM-yyyy")
+├── taskCategory, subjectCategory
+├── description (Markdown)
 ├── reminderMuted, isCompleted, isDeleted
-└── subTugasList: List<SubTugas>
+└── subTaskList: List<SubTask>
 
-Catatan
-├── id, tugasId, subTugasId (opsional)
-├── judul, isi (Markdown)
+Note
+├── id, taskId, subTaskId (optional)
+├── title, content (Markdown)
 ├── timestamp, isDeleted
 
-Kategori
-├── nama, warna (ARGB Int), isDeleted
+Category
+├── name, color (ARGB Int), isDeleted
 
 Playlist
-├── id, nama
-└── laguList: List<Lagu>
+├── id, name
+└── songList: List<Song>
 ```
 
-### Relasi
+### Relationships
 
 ```
-Tugas (1) ──── (*) SubTugas
-Tugas (1) ──── (*) Catatan
-SubTugas (1) ── (*) Catatan
-Playlist (1) ── (*) Lagu
+Task (1) ──── (*) SubTask  
+Task (1) ──── (*) Note  
+SubTask (1) ── (*) Note  
+Playlist (1) ── (*) Song  
 ```
 
 ---
 
-## Penyimpanan Data
+## Data Storage
 
-Semua data disimpan sebagai JSON di **internal storage** (`filesDir`):
+All data is stored as JSON in **internal storage** (`filesDir`):
 
-| File | Isi |
-|------|-----|
-| `tugas.json` | List tugas |
-| `catatan.json` | List catatan |
-| `kategori_tugas_v2.json` | Tipe tugas |
-| `kategori_matkul_v2.json` | Kategori matkul |
-| `notification_settings.json` | Pengaturan notifikasi |
-| `playlists.json` | Data playlist |
-| `music/` | File audio yang diimport |
+| File                         | Content               |
+| ---------------------------- | --------------------- |
+| `tugas.json`                 | Task list             |
+| `catatan.json`               | Note list             |
+| `kategori_tugas_v2.json`     | Task types            |
+| `kategori_matkul_v2.json`    | Subject categories    |
+| `notification_settings.json` | Notification settings |
+| `playlists.json`             | Playlist data         |
+| `music/`                     | Imported audio files  |
 
 ---
 
-## Notifikasi Deadline
+## Deadline Notifications
 
-WorkManager menjalankan `DeadlineWorker` secara periodik dengan dua mode:
+WorkManager runs `DeadlineWorker` periodically in two modes:
 
-- **Interval** — berjalan setiap N jam M menit (minimum 15 menit)
-- **Specific Time** — berjalan setiap 15 menit, notifikasi hanya dikirim pada jam yang ditentukan (±60 menit)
+* **Interval** — runs every N hours M minutes (minimum 15 minutes)
+* **Specific Time** — runs every 15 minutes, notifications are only sent at specified times (±60 minutes tolerance)
 
-Notifikasi dikirim untuk tugas dengan deadline **hari ini** (URGENT) dan **besok** (REMINDER). User bisa mematikan notifikasi per tugas via tombol mute di kartu tugas.
+Notifications are sent for tasks with deadlines **today** (URGENT) and **tomorrow** (REMINDER). Users can mute notifications per task via a mute button on the task card.
 
 ---
 
 ## Music Player
 
-- Import audio dari file picker atau seluruh folder sekaligus (SAF)
-- Playlist management: buat, rename, hapus, reorder lagu
-- Export/import playlist sebagai file `.taskora_playlist` (ZIP)
-- Background playback via `MediaSessionService` (ExoPlayer)
-- Album art otomatis dari metadata audio
-- Mini player + full player dengan slider, shuffle, repeat
+* Import audio from file picker or entire folders (SAF)
+* Playlist management: create, rename, delete, reorder songs
+* Export/import playlists as `.taskora_playlist` files (ZIP)
+* Background playback via `MediaSessionService` (ExoPlayer)
+* Automatic album art from audio metadata
+* Mini player + full player with slider, shuffle, repeat
 
 ---
 
 ## Permissions
 
-| Permission | Kegunaan |
-|-----------|---------|
-| `POST_NOTIFICATIONS` | Notifikasi deadline (Android 13+) |
-| `INTERNET` | Render gambar dari URL di Markdown |
-| `FOREGROUND_SERVICE` | Background music |
-| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Tipe service audio |
-| `READ_MEDIA_AUDIO` | Import file audio (Android 13+) |
-| `READ_EXTERNAL_STORAGE` | Import file audio (Android ≤ 12) |
+| Permission                          | Purpose                              |
+| ----------------------------------- | ------------------------------------ |
+| `POST_NOTIFICATIONS`                | Deadline notifications (Android 13+) |
+| `INTERNET`                          | Render images from URLs in Markdown  |
+| `FOREGROUND_SERVICE`                | Background music                     |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Audio service type                   |
+| `READ_MEDIA_AUDIO`                  | Import audio files (Android 13+)     |
+| `READ_EXTERNAL_STORAGE`             | Import audio files (Android ≤ 12)    |
 
 ---
 
-## Tema
+## Theme
 
-Aplikasi menggunakan palet warna **Neon Cyberpunk**:
+The app uses a **Neon Cyberpunk** color palette:
 
-- Background: `#05050A` (hampir hitam)
-- Surface: `#121224`
-- Accent utama: Cyan `#00F2FF`, Magenta `#FF00D4`, Purple `#9D00FF`
-- Status indikator: Green `#39FF14` (selesai), Red `#FF3131` (deadline dekat)
+* Background: `#05050A` (almost black)
+* Surface: `#121224`
+* Main accents: Cyan `#00F2FF`, Magenta `#FF00D4`, Purple `#9D00FF`
+* Status indicators: Green `#39FF14` (completed), Red `#FF3131` (near deadline)
 
 ---
