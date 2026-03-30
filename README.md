@@ -1,5 +1,3 @@
----
-
 # Taskora
 
 > An Android task management application with a **Cyberpunk/Neon** theme, built using Kotlin + Jetpack Compose.
